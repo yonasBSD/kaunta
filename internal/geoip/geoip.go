@@ -54,24 +54,22 @@ func Init(dataDir string) error {
 // LookupIP returns country, city, and region for an IP address
 func LookupIP(ipStr string) (country, city, region string) {
 	if reader == nil {
-		return "Unknown", "", ""
+		return "", "", ""
 	}
 
 	ip := net.ParseIP(ipStr)
 	if ip == nil {
-		return "Unknown", "", ""
+		return "", "", ""
 	}
 
 	record, err := reader.City(ip)
 	if err != nil {
 		log.Printf("GeoIP lookup error for %s: %v", ipStr, err)
-		return "Unknown", "", ""
+		return "", "", ""
 	}
 
 	country = record.Country.IsoCode
-	if country == "" {
-		country = "Unknown"
-	}
+	// Keep country empty if not found (don't use "Unknown" - session.country is CHAR(2))
 
 	city = record.City.Names["en"]
 

@@ -138,7 +138,7 @@ func HandleTracking(c *fiber.Ctx) error {
 
 	// Bot detection using PostgreSQL (dictatorship approach - all logic in DB)
 	// This updates IP metadata and returns bot status in one call
-	var isBot bool
+	var isBot *bool // Use pointer to handle NULL values
 	err = database.DB.QueryRow(`
 		SELECT update_ip_metadata($1::inet, $2, NULL)
 	`, ip, userAgent).Scan(&isBot)
@@ -146,9 +146,13 @@ func HandleTracking(c *fiber.Ctx) error {
 	if err != nil {
 		// Log error but don't block traffic on bot detection failure
 		log.Printf("Bot detection error for IP %s: %v", ip, err)
+		// Default to not a bot if detection fails
+		isBotVal := false
+		isBot = &isBotVal
 	}
 
-	if isBot {
+	// Check if it's a bot (handle nil gracefully)
+	if isBot != nil && *isBot {
 		// Return 202 for bots (acknowledged but not processed)
 		return c.Status(202).JSON(fiber.Map{"beep": "boop", "bot_detected": true})
 	}
@@ -190,8 +194,9 @@ func HandleTracking(c *fiber.Ctx) error {
 		country, region, city, distinctID)
 
 	if err != nil {
+		log.Printf("Session creation error for website %s, sessionID %s: %v", websiteID, sessionID, err)
 		return c.Status(500).JSON(fiber.Map{
-			"error": "Failed to create session",
+			"error": "Failed to create session: " + err.Error(),
 		})
 	}
 
