@@ -10,6 +10,10 @@
     <script defer src="/assets/vendor/leaflet-1.9.4.min.js?v=1.9.4.1"></script>
     <script defer src="/assets/vendor/topojson-client-3.1.0.min.js?v=3.1.0.1"></script>
     <style>
+        [x-cloak] {
+            display: none !important;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -433,7 +437,7 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="container" x-data="dashboard()" x-init="init()" x-cloak>
         <header>
             <div class="header-left">
                 <h1>Kaunta (カウンタ)</h1>
@@ -442,6 +446,9 @@
             <div class="header-controls">
                 <select x-model="selectedWebsite" @change="switchWebsite()" x-show="websites.length > 0">
                     <option value="">Select Website...</option>
+                    <template x-for="site in websites" :key="site.id">
+                        <option :value="site.id" x-text="site.name || site.domain"></option>
+                    </template>
                 </select>
 
                 <div class="date-range-buttons">
@@ -488,7 +495,7 @@
         </header>
 
         <!-- Dashboard App -->
-        <div x-data="dashboard()" x-show="selectedWebsite">
+        <div x-show="!websitesLoading && !websitesError && selectedWebsite && websites.length > 0">
             <!-- Stats Grid -->
             <div class="stats-grid">
                 <div class="stat-card">
@@ -604,10 +611,24 @@
         </div>
 
         <!-- No Website Selected -->
-        <div x-data="dashboard()" x-show="!selectedWebsite && websites.length > 0" class="empty-state" style="margin-top: 100px;">
+        <div x-show="!websitesLoading && !websitesError && !selectedWebsite && websites.length > 0" class="empty-state" style="margin-top: 100px;">
             <div class="empty-state-icon">🌐</div>
             <div class="empty-state-title">Select a Website</div>
             <div class="empty-state-text">Choose a website from the dropdown above to view analytics</div>
+        </div>
+
+        <!-- No Websites at All -->
+        <div x-show="!websitesLoading && !websitesError && websites.length === 0" class="empty-state" style="margin-top: 100px;">
+            <div class="empty-state-icon">🛰️</div>
+            <div class="empty-state-title">No websites found</div>
+            <div class="empty-state-text">Add a website in Kaunta to get started.</div>
+        </div>
+
+        <!-- Websites Load Error -->
+        <div x-show="!websitesLoading && websitesError" class="empty-state" style="margin-top: 100px;">
+            <div class="empty-state-icon">⚠️</div>
+            <div class="empty-state-title">Unable to load websites</div>
+            <div class="empty-state-text">Check the server logs for /api/websites errors and try again.</div>
         </div>
 
         <div class="philosophy">
@@ -622,6 +643,8 @@
         function dashboard() {
             return {
                 websites: [],
+                websitesLoading: true,
+                websitesError: false,
                 selectedWebsite: localStorage.getItem('kaunta_website') || '',
                 dateRange: localStorage.getItem('kaunta_dateRange') || '1',
                 stats: {
@@ -665,6 +688,11 @@
 
                     await this.loadWebsites();
 
+                    if (this.websitesError) {
+                        this.loading = false;
+                        return;
+                    }
+
                     // If we have a selected website, load its data
                     if (this.selectedWebsite) {
                         await this.loadAvailableFilters();
@@ -688,33 +716,35 @@
                 },
 
                 async loadWebsites() {
+                    this.websitesLoading = true;
+                    this.websitesError = false;
                     try {
                         const response = await fetch('/api/websites');
-                        if (response.ok) {
-                            this.websites = await response.json();
+                        if (!response.ok) {
+                            this.websitesError = true;
+                            return;
+                        }
 
-                            // Manually populate select element (Alpine can't do this automatically)
-                            const select = document.querySelector('select');
-                            if (select) {
-                                select.innerHTML = '<option value="">Select Website...</option>';
-                                this.websites.forEach(site => {
-                                    const opt = document.createElement('option');
-                                    opt.value = site.id;
-                                    opt.textContent = site.name || site.domain;
-                                    select.appendChild(opt);
-                                });
-                            }
+                        const sites = await response.json();
+                        this.websites = Array.isArray(sites) ? sites : [];
 
-                            // Auto-select first website if none selected
-                            if (!this.selectedWebsite && this.websites.length > 0) {
-                                this.selectedWebsite = this.websites[0].id;
-                                localStorage.setItem('kaunta_website', this.selectedWebsite);
-                                this.loadStats();
-                                this.loadTopPages();
-                            }
+                        const hasStoredSelection = this.selectedWebsite &&
+                            this.websites.some(site => site.id === this.selectedWebsite);
+
+                        if (!hasStoredSelection && this.selectedWebsite) {
+                            this.selectedWebsite = '';
+                            localStorage.removeItem('kaunta_website');
+                        }
+
+                        if (!this.selectedWebsite && this.websites.length > 0) {
+                            this.selectedWebsite = this.websites[0].id;
+                            localStorage.setItem('kaunta_website', this.selectedWebsite);
                         }
                     } catch (error) {
                         console.error('Failed to load websites:', error);
+                        this.websitesError = true;
+                    } finally {
+                        this.websitesLoading = false;
                     }
                 },
 

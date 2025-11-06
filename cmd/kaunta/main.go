@@ -135,7 +135,8 @@ func main() {
 	app.Use(logger.New())
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: "*",
-		AllowHeaders: "Origin, Content-Type, Accept, X-Umami-Cache",
+		AllowHeaders: "Origin, Content-Type, Accept",
+		AllowMethods: "GET, POST, OPTIONS",
 	}))
 
 	// Add version header to all responses
@@ -208,6 +209,9 @@ func main() {
 	app.Get("/script.js", handleTrackerScript) // Umami-compatible alias
 
 	// Tracking API (Umami-compatible)
+	app.Options("/api/send", func(c *fiber.Ctx) error {
+		return c.SendStatus(fiber.StatusOK)
+	})
 	app.Post("/api/send", handlers.HandleTracking)
 
 	// Stats API (Plausible-inspired)
