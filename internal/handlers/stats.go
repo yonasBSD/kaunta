@@ -86,7 +86,7 @@ func HandleDashboardStats(c *fiber.Ctx) error {
 				HAVING COUNT(*) = 1
 			) bounced_sessions`
 
-		database.DB.QueryRow(query, filterArgs...).Scan(&bounces)
+		_ = database.DB.QueryRow(query, filterArgs...).Scan(&bounces)
 
 		bounceRatePercent := float64(bounces) / float64(todayVisitors) * 100
 		bounceRate = fmt.Sprintf("%.1f%%", bounceRatePercent)

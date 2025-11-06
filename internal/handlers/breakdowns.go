@@ -39,7 +39,9 @@ func HandleTopReferrers(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to query referrers"})
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	var items []BreakdownItem
 	for rows.Next() {
@@ -84,7 +86,7 @@ func HandleTopBrowsers(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to query browsers"})
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var items []BreakdownItem
 	for rows.Next() {
@@ -129,7 +131,7 @@ func HandleTopDevices(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to query devices"})
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var items []BreakdownItem
 	for rows.Next() {
@@ -174,7 +176,7 @@ func HandleTopCountries(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to query countries"})
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var items []BreakdownItem
 	for rows.Next() {
@@ -219,7 +221,7 @@ func HandleTopCities(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to query cities"})
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var items []BreakdownItem
 	for rows.Next() {
@@ -264,7 +266,7 @@ func HandleTopRegions(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to query regions"})
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var items []BreakdownItem
 	for rows.Next() {
@@ -330,7 +332,7 @@ func HandleMapData(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to query map data"})
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var data []MapDataPoint
 	for rows.Next() {

@@ -44,7 +44,7 @@ func HandleTopPages(c *fiber.Ctx) error {
 			"error": "Failed to query top pages",
 		})
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var pages []TopPage
 	for rows.Next() {

@@ -11,35 +11,21 @@ import (
 func buildFilterClause(c *fiber.Ctx, baseArgs []interface{}) (string, []interface{}) {
 	var conditions []string
 	args := baseArgs
-	argNum := len(baseArgs) + 1
 
-	// Country filter
-	if country := c.Query("country"); country != "" {
-		conditions = append(conditions, fmt.Sprintf("s.country = $%d", argNum))
-		args = append(args, country)
-		argNum++
+	// Helper function to add filter
+	addFilter := func(columnName, value string) {
+		if value != "" {
+			argNum := len(args) + 1
+			conditions = append(conditions, fmt.Sprintf("%s = $%d", columnName, argNum))
+			args = append(args, value)
+		}
 	}
 
-	// Browser filter
-	if browser := c.Query("browser"); browser != "" {
-		conditions = append(conditions, fmt.Sprintf("s.browser = $%d", argNum))
-		args = append(args, browser)
-		argNum++
-	}
-
-	// Device filter
-	if device := c.Query("device"); device != "" {
-		conditions = append(conditions, fmt.Sprintf("s.device = $%d", argNum))
-		args = append(args, device)
-		argNum++
-	}
-
-	// Page filter
-	if page := c.Query("page"); page != "" {
-		conditions = append(conditions, fmt.Sprintf("e.url_path = $%d", argNum))
-		args = append(args, page)
-		argNum++
-	}
+	// Add filters
+	addFilter("s.country", c.Query("country"))
+	addFilter("s.browser", c.Query("browser"))
+	addFilter("s.device", c.Query("device"))
+	addFilter("e.url_path", c.Query("page"))
 
 	clause := ""
 	if len(conditions) > 0 {

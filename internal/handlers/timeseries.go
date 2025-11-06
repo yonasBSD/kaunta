@@ -44,7 +44,7 @@ func HandleTimeSeries(c *fiber.Ctx) error {
 			"error": "Failed to query time series",
 		})
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var points []TimeSeriesPoint
 	for rows.Next() {

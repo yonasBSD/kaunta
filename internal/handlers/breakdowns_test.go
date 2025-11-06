@@ -29,7 +29,7 @@ func TestHandleTopReferrers_Success(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/dashboard/referrers/"+websiteID.String(), nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	var items []BreakdownItem
@@ -58,7 +58,7 @@ func TestHandleTopReferrers_Filtered(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, url, nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	require.NoError(t, queue.expectationsMet())
@@ -81,7 +81,7 @@ func TestHandleTopBrowsers_Success(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/dashboard/browsers/"+websiteID.String(), nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	require.NoError(t, queue.expectationsMet())
@@ -104,7 +104,7 @@ func TestHandleTopDevices_Success(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/dashboard/devices/"+websiteID.String(), nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	require.NoError(t, queue.expectationsMet())
@@ -127,7 +127,7 @@ func TestHandleTopCountries_Success(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/dashboard/countries/"+websiteID.String(), nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	require.NoError(t, queue.expectationsMet())
@@ -153,6 +153,6 @@ func TestBreakdownHandlers_InvalidWebsiteID(t *testing.T) {
 		resp, err := app.Test(req)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }

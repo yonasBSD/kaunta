@@ -182,7 +182,7 @@ func setupFiberTest(t *testing.T, route string, handler fiber.Handler, responses
 
 	cleanup := func() {
 		database.DB = originalDB
-		db.Close()
+		_ = db.Close()
 	}
 
 	return app, queue, cleanup

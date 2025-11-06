@@ -32,7 +32,7 @@ func TestHandleTimeSeries_Success(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/dashboard/timeseries/"+websiteID.String(), nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	var points []TimeSeriesPoint
@@ -62,7 +62,7 @@ func TestHandleTimeSeries_WithFilters(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, url, nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	require.NoError(t, queue.expectationsMet())
@@ -75,7 +75,7 @@ func TestHandleTimeSeries_InvalidWebsiteID(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/dashboard/timeseries/not-a-uuid", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
@@ -96,7 +96,7 @@ func TestHandleTimeSeries_QueryError(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/dashboard/timeseries/"+websiteID.String(), nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 	require.NoError(t, queue.expectationsMet())

@@ -34,7 +34,7 @@ func TestHandleTopPages_Success(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/dashboard/pages/"+websiteID.String(), nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	bodyBytes, readErr := io.ReadAll(resp.Body)
 	require.NoError(t, readErr)
@@ -71,7 +71,7 @@ func TestHandleTopPages_WithFilters(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, url, nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	var pages []TopPage
@@ -88,7 +88,7 @@ func TestHandleTopPages_InvalidWebsiteID(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/dashboard/pages/not-a-uuid", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
@@ -109,7 +109,7 @@ func TestHandleTopPages_QueryError(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/dashboard/pages/"+websiteID.String(), nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 	require.NoError(t, queue.expectationsMet())

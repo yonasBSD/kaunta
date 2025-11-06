@@ -48,7 +48,7 @@ func TestHandleDashboardStats_Success(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/dashboard/stats/"+websiteID.String(), nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -69,7 +69,7 @@ func TestHandleDashboardStats_InvalidWebsiteID(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/dashboard/stats/not-a-uuid", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
@@ -103,7 +103,7 @@ func TestHandleDashboardStats_QueryErrors(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/dashboard/stats/"+websiteID.String(), nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 

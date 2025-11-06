@@ -74,7 +74,11 @@ func LookupIP(ipStr string) (country, city, region string) {
 	}
 
 	city = record.City.Names["en"]
-	region = record.Subdivisions[0].Names["en"]
+
+	// Handle subdivisions safely - only access if present
+	if len(record.Subdivisions) > 0 {
+		region = record.Subdivisions[0].Names["en"]
+	}
 
 	return country, city, region
 }
@@ -106,7 +110,11 @@ func downloadDatabase(dbPath string) error {
 	if err != nil {
 		return fmt.Errorf("download failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("Warning: failed to close response body: %v", err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("download failed with status %d", resp.StatusCode)
@@ -117,14 +125,22 @@ func downloadDatabase(dbPath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create gzip reader: %w", err)
 	}
-	defer gzReader.Close()
+	defer func() {
+		if err := gzReader.Close(); err != nil {
+			log.Printf("Warning: failed to close gzip reader: %v", err)
+		}
+	}()
 
 	// Write to file
 	out, err := os.Create(dbPath)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() {
+		if err := out.Close(); err != nil {
+			log.Printf("Warning: failed to close output file: %v", err)
+		}
+	}()
 
 	if _, err := io.Copy(out, gzReader); err != nil {
 		return fmt.Errorf("failed to write database: %w", err)

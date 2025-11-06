@@ -18,7 +18,7 @@ func HandleWebsites(c *fiber.Ctx) error {
 			"error": "Failed to query websites",
 		})
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var websites []Website
 	for rows.Next() {

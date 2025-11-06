@@ -99,7 +99,11 @@ func main() {
 	if err := database.Connect(); err != nil {
 		log.Fatalf("Database connection failed: %v", err)
 	}
-	defer database.Close()
+	defer func() {
+		if err := database.Close(); err != nil {
+			log.Printf("Error closing database: %v", err)
+		}
+	}()
 
 	// Initialize GeoIP database (downloads if missing)
 	dataDir := os.Getenv("DATA_DIR")
@@ -109,7 +113,11 @@ func main() {
 	if err := geoip.Init(dataDir); err != nil {
 		log.Fatalf("GeoIP initialization failed: %v", err)
 	}
-	defer geoip.Close()
+	defer func() {
+		if err := geoip.Close(); err != nil {
+			log.Printf("Error closing GeoIP: %v", err)
+		}
+	}()
 
 	// Initialize template engine (using embedded template)
 	// All templates are embedded in binary via //go:embed directives above

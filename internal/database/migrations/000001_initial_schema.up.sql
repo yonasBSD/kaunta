@@ -464,7 +464,8 @@ BEGIN
     SELECT kb.is_bot, kb.bot_type, kb.pattern_name, kb.is_legitimate INTO v_is_bot, v_bot_type, v_pattern_name, v_is_legitimate
     FROM is_known_bot_ua(p_user_agent) kb;
 
-    IF v_is_bot THEN
+    -- FOUND is true if SELECT INTO returned a row, false if no rows matched
+    IF FOUND AND v_is_bot THEN
         v_confidence := CASE WHEN v_pattern_name != 'generic_bot' THEN 90 ELSE 60 END;
         v_detection_reason := 'User agent matches known pattern: ' || v_pattern_name;
     END IF;

@@ -25,7 +25,9 @@ func RunMigrations(databaseURL string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create migrate instance: %w", err)
 	}
-	defer m.Close()
+	defer func() {
+		_, _ = m.Close()
+	}()
 
 	// Run migrations
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
@@ -46,7 +48,9 @@ func GetMigrationVersion(databaseURL string) (uint, bool, error) {
 	if err != nil {
 		return 0, false, fmt.Errorf("failed to create migrate instance: %w", err)
 	}
-	defer m.Close()
+	defer func() {
+		_, _ = m.Close()
+	}()
 
 	version, dirty, err := m.Version()
 	if err != nil && err != migrate.ErrNilVersion {

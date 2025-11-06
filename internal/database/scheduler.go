@@ -116,7 +116,11 @@ func (ps *PartitionScheduler) cleanupOldPartitions() {
 		log.Printf("⚠️  Failed to query old partitions: %v", err)
 		return
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Printf("Warning: failed to close rows: %v", err)
+		}
+	}()
 
 	droppedCount := 0
 	for rows.Next() {
@@ -226,7 +230,11 @@ func GetMaterializedViewStats() (map[string]interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to query matview stats: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Printf("Warning: failed to close rows: %v", err)
+		}
+	}()
 
 	views := []map[string]interface{}{}
 	for rows.Next() {

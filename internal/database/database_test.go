@@ -13,14 +13,14 @@ func TestConnect_MissingDatabaseURL(t *testing.T) {
 	originalURL := os.Getenv("DATABASE_URL")
 	defer func() {
 		if originalURL != "" {
-			os.Setenv("DATABASE_URL", originalURL)
+			_ = os.Setenv("DATABASE_URL", originalURL)
 		} else {
-			os.Unsetenv("DATABASE_URL")
+			_ = os.Unsetenv("DATABASE_URL")
 		}
 	}()
 
 	// Unset DATABASE_URL
-	os.Unsetenv("DATABASE_URL")
+	_ = os.Unsetenv("DATABASE_URL")
 
 	// Attempt to connect
 	err := Connect()
@@ -35,14 +35,14 @@ func TestConnect_InvalidDatabaseURL(t *testing.T) {
 	originalURL := os.Getenv("DATABASE_URL")
 	defer func() {
 		if originalURL != "" {
-			os.Setenv("DATABASE_URL", originalURL)
+			_ = os.Setenv("DATABASE_URL", originalURL)
 		} else {
-			os.Unsetenv("DATABASE_URL")
+			_ = os.Unsetenv("DATABASE_URL")
 		}
 	}()
 
 	// Set invalid DATABASE_URL
-	os.Setenv("DATABASE_URL", "invalid://not-a-database")
+	_ = os.Setenv("DATABASE_URL", "invalid://not-a-database")
 
 	// Attempt to connect
 	err := Connect()
@@ -100,13 +100,13 @@ func TestDatabaseURL_Formats(t *testing.T) {
 			originalURL := os.Getenv("DATABASE_URL")
 			defer func() {
 				if originalURL != "" {
-					os.Setenv("DATABASE_URL", originalURL)
+					_ = os.Setenv("DATABASE_URL", originalURL)
 				} else {
-					os.Unsetenv("DATABASE_URL")
+					_ = os.Unsetenv("DATABASE_URL")
 				}
 			}()
 
-			os.Setenv("DATABASE_URL", tt.url)
+			_ = os.Setenv("DATABASE_URL", tt.url)
 
 			err := Connect()
 
@@ -164,13 +164,13 @@ func TestConnect_ErrorMessages(t *testing.T) {
 			originalURL := os.Getenv("DATABASE_URL")
 			defer func() {
 				if originalURL != "" {
-					os.Setenv("DATABASE_URL", originalURL)
+					_ = os.Setenv("DATABASE_URL", originalURL)
 				} else {
-					os.Unsetenv("DATABASE_URL")
+					_ = os.Unsetenv("DATABASE_URL")
 				}
 			}()
 
-			os.Setenv("DATABASE_URL", tt.url)
+			_ = os.Setenv("DATABASE_URL", tt.url)
 
 			err := Connect()
 
@@ -212,18 +212,18 @@ func BenchmarkConnect(b *testing.B) {
 	originalURL := os.Getenv("DATABASE_URL")
 	defer func() {
 		if originalURL != "" {
-			os.Setenv("DATABASE_URL", originalURL)
+			_ = os.Setenv("DATABASE_URL", originalURL)
 		} else {
-			os.Unsetenv("DATABASE_URL")
+			_ = os.Unsetenv("DATABASE_URL")
 		}
 	}()
 
 	// Set a dummy URL (will fail but we're measuring the attempt)
-	os.Setenv("DATABASE_URL", "postgres://test:test@localhost:5432/test")
+	_ = os.Setenv("DATABASE_URL", "postgres://test:test@localhost:5432/test")
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		Connect()
-		Close()
+		_ = Connect()
+		_ = Close()
 	}
 }

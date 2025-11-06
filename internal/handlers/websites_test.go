@@ -31,7 +31,7 @@ func TestHandleWebsites_Success(t *testing.T) {
 
 	db, err := sql.Open(driverName, "")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	original := database.DB
 	database.DB = db
@@ -43,7 +43,7 @@ func TestHandleWebsites_Success(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/websites", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -70,7 +70,7 @@ func TestHandleWebsites_QueryError(t *testing.T) {
 
 	db, err := sql.Open(driverName, "")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	original := database.DB
 	database.DB = db
@@ -82,7 +82,7 @@ func TestHandleWebsites_QueryError(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/websites", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 	require.NoError(t, queue.expectationsMet())
