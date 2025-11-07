@@ -661,7 +661,7 @@ func outputTable(websites []*WebsiteDetail) error {
 		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
 			website.Domain,
 			website.Name,
-			website.WebsiteID[:8]+"...", // Show first 8 chars of UUID
+			website.WebsiteID,
 			website.CreatedAt.Format("2006-01-02 15:04:05"),
 		)
 	}
