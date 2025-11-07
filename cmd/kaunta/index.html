@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kaunta - Analytics without bloat</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 800px;
+            margin: 100px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 { color: #2c3e50; }
+        .subtitle { color: #7f8c8d; font-style: italic; }
+        .status {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Kaunta (カウンタ)</h1>
+    <p class="subtitle">Analytics without bloat.</p>
+
+    <div class="status">
+        <strong>Status:</strong> Production<br>
+        <strong>Memory:</strong> ~12MB (vs Umami's 200-500MB)<br>
+        <strong>Size:</strong> Single Go binary (vs 300MB node_modules)<br>
+        <strong>React:</strong> None (that's the point)
+    </div>
+
+    <h2>Features</h2>
+    <ul>
+        <li>Privacy-focused visitor tracking</li>
+        <li>Minimal resource usage</li>
+        <li>PostgreSQL backend</li>
+        <li>Real-time analytics dashboard</li>
+    </ul>
+
+    <p style="text-align: center; margin-top: 40px;">
+        <a href="https://github.com/seuros/kaunta">View on GitHub</a>
+    </p>
+</body>
+</html>

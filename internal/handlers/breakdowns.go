@@ -288,14 +288,8 @@ func HandleMapData(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid website ID"})
 	}
 
-	// Get date range (default 7 days, max 90)
-	days := c.QueryInt("days", 7)
-	if days > 90 {
-		days = 90
-	}
-	if days < 1 {
-		days = 7
-	}
+	// Get date range (default 7 days, clamp between 1 and 90)
+	days := min(max(c.QueryInt("days", 7), 1), 90)
 
 	// Build filter clause
 	baseArgs := []interface{}{websiteID, days}

@@ -20,12 +20,13 @@ Environment variables:
 Example:
   DATABASE_URL="postgres://user:pass@localhost/kaunta" kaunta serve`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-	return serveAnalytics(
-		TrackerScript,
-		VendorJS,
-		VendorCSS,
-		CountriesGeoJSON,
-		DashboardTemplate,
-	)
+		return serveAnalytics(
+			TrackerScript,
+			VendorJS,
+			VendorCSS,
+			CountriesGeoJSON,
+			DashboardTemplate,
+			IndexTemplate,
+		)
 	},
 }

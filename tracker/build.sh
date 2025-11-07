@@ -1,44 +1,43 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-echo "🔨 Building Kaunta tracker..."
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+OUTPUT="$ROOT_DIR/cmd/kaunta/assets/kaunta.min.js"
+SOURCE="$ROOT_DIR/tracker/kaunta.js"
+
+echo "🔨 Building Kaunta tracker with Bun..."
 echo ""
 
-# Check for terser
-if ! command -v terser &> /dev/null; then
-    echo "❌ terser not found. Installing..."
-    npm install -g terser
+if ! command -v bun &> /dev/null; then
+    echo "❌ Bun not found. Install it from https://bun.sh before running this script."
+    exit 1
 fi
 
-# Minify
-echo "📦 Minifying..."
-terser kaunta.js \
-  --compress passes=3,drop_console=false \
-  --mangle \
-  --comments false \
-  --output kaunta.min.js
+pushd "$ROOT_DIR" > /dev/null
+bun run build:tracker
+popd > /dev/null
 
-echo "✅ Minified"
+echo "✅ Tracker bundle created at $OUTPUT"
 
 # Generate SRI hash
 echo ""
 echo "🔐 SRI Hash (sha384):"
-echo "   sha384-$(openssl dgst -sha384 -binary kaunta.min.js | openssl base64 -A)"
+echo "   sha384-$(openssl dgst -sha384 -binary "$OUTPUT" | openssl base64 -A)"
 
 # Gzip for size testing
-gzip -c kaunta.min.js > kaunta.min.js.gz
+gzip -c "$OUTPUT" > "$OUTPUT.gz"
 
 # Report sizes
 echo ""
 echo "📊 Sizes:"
-printf "   Original: %'8d bytes (%.2f KB)\n" $(wc -c < kaunta.js) $(echo "scale=2; $(wc -c < kaunta.js)/1024" | bc)
-printf "   Minified: %'8d bytes (%.2f KB)\n" $(wc -c < kaunta.min.js) $(echo "scale=2; $(wc -c < kaunta.min.js)/1024" | bc)
-printf "   Gzipped:  %'8d bytes (%.2f KB)\n" $(wc -c < kaunta.min.js.gz) $(echo "scale=2; $(wc -c < kaunta.min.js.gz)/1024" | bc)
+printf "   Original: %'8d bytes (%.2f KB)\n" $(wc -c < "$SOURCE") $(echo "scale=2; $(wc -c < "$SOURCE")/1024" | bc)
+printf "   Minified: %'8d bytes (%.2f KB)\n" $(wc -c < "$OUTPUT") $(echo "scale=2; $(wc -c < "$OUTPUT")/1024" | bc)
+printf "   Gzipped:  %'8d bytes (%.2f KB)\n" $(wc -c < "$OUTPUT.gz") $(echo "scale=2; $(wc -c < "$OUTPUT.gz")/1024" | bc)
 
 # Calculate savings
-original_size=$(wc -c < kaunta.js)
-minified_size=$(wc -c < kaunta.min.js)
-gzipped_size=$(wc -c < kaunta.min.js.gz)
+original_size=$(wc -c < "$SOURCE")
+minified_size=$(wc -c < "$OUTPUT")
+gzipped_size=$(wc -c < "$OUTPUT.gz")
 
 minified_percent=$(echo "scale=1; 100 - ($minified_size * 100 / $original_size)" | bc)
 gzipped_percent=$(echo "scale=1; 100 - ($gzipped_size * 100 / $original_size)" | bc)
@@ -49,7 +48,7 @@ echo "   Minified: -${minified_percent}%"
 echo "   Gzipped:  -${gzipped_percent}%"
 
 # Cleanup
-rm kaunta.min.js.gz
+rm "$OUTPUT.gz"
 
 echo ""
-echo "✨ Done! Output: kaunta.min.js"
+echo "✨ Done! Output: $OUTPUT"

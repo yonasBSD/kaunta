@@ -286,6 +286,15 @@ Example with SRI:
 
 ## Building
 
+### Using Bun (recommended)
+
+```bash
+bun install
+bun run build:tracker
+```
+
+This creates `cmd/kaunta/assets/kaunta.min.js`, which is the version embedded in the Go binary.
+
 ### Using Terser
 
 ```bash
@@ -294,7 +303,7 @@ npm install -g terser
 terser kaunta.js \
   --compress \
   --mangle \
-  --output kaunta.min.js
+  --output ../cmd/kaunta/assets/kaunta.min.js
 ```
 
 ### Using esbuild
@@ -304,12 +313,12 @@ npm install -g esbuild
 
 esbuild kaunta.js \
   --minify \
-  --outfile=kaunta.min.js
+  --outfile=../cmd/kaunta/assets/kaunta.min.js
 ```
 
 ### Build Script
 
-See `build.sh` for automated minification.
+Run `tracker/build.sh` to invoke Bun and print SRI/size info for the generated bundle.
 
 ## Testing
 

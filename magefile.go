@@ -17,7 +17,7 @@ func buildAssets() error {
 		return err
 	}
 	fmt.Println("Building frontend assets with Bun...")
-	return sh.Run("bun", "run", "build:vendor")
+	return sh.Run("bun", "run", "build")
 }
 
 // Build builds Kaunta for Linux with Green Tea GC

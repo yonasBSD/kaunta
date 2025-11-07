@@ -13,7 +13,7 @@ ENV PATH="/root/.bun/bin:$PATH"
 
 RUN curl -fsSL https://bun.sh/install | bash
 RUN bun install --frozen-lockfile
-RUN bun run build:vendor
+RUN bun run build
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build \

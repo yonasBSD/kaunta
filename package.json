@@ -3,7 +3,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "bun run build:vendor",
+    "build": "bun run build:tracker && bun run build:vendor",
+    "build:tracker": "bun build tracker/kaunta.js --outfile cmd/kaunta/assets/kaunta.min.js --target=browser --minify --sourcemap=none",
     "build:vendor": "bun build frontend/vendor.ts --outdir cmd/kaunta/assets/dist --target=browser --minify --sourcemap=none"
   },
   "dependencies": {

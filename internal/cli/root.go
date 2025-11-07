@@ -38,6 +38,7 @@ It provides real-time analytics and a clean dashboard interface.`,
 				VendorCSS,
 				CountriesGeoJSON,
 				DashboardTemplate,
+				IndexTemplate,
 			)
 		}
 		return cmd.Help()
@@ -45,13 +46,22 @@ It provides real-time analytics and a clean dashboard interface.`,
 }
 
 // Execute is called by main
-func Execute(version string, trackerScript, vendorJS, vendorCSS, countriesGeoJSON, dashboardTemplate []byte) error {
+func Execute(
+	version string,
+	trackerScript,
+	vendorJS,
+	vendorCSS,
+	countriesGeoJSON,
+	dashboardTemplate,
+	indexTemplate []byte,
+) error {
 	Version = version
 	TrackerScript = trackerScript
 	VendorJS = vendorJS
 	VendorCSS = vendorCSS
 	CountriesGeoJSON = countriesGeoJSON
 	DashboardTemplate = dashboardTemplate
+	IndexTemplate = indexTemplate
 
 	RootCmd.Version = version
 
@@ -65,11 +75,12 @@ var (
 	VendorCSS         []byte
 	CountriesGeoJSON  []byte
 	DashboardTemplate []byte
+	IndexTemplate     []byte
 )
 
 // serveAnalytics runs the Kaunta server
 func serveAnalytics(
-	trackerScript, vendorJS, vendorCSS, countriesGeoJSON, dashboardTemplate []byte,
+	trackerScript, vendorJS, vendorCSS, countriesGeoJSON, dashboardTemplate, indexTemplate []byte,
 ) error {
 	// Get database URL
 	databaseURL := os.Getenv("DATABASE_URL")
@@ -177,7 +188,7 @@ func serveAnalytics(
 	})
 
 	// Routes
-	app.Get("/", handleIndex)
+	app.Get("/", handleIndex(indexTemplate))
 	app.Get("/health", handleHealth)
 	app.Get("/up", handleUp) // Docker health check
 	app.Get("/api/version", handleVersion)
@@ -228,59 +239,11 @@ func serveAnalytics(
 
 // Handler functions
 
-func handleIndex(c *fiber.Ctx) error {
-	c.Set("Content-Type", "text/html; charset=utf-8")
-	return c.SendString(`
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kaunta - Analytics without bloat</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            max-width: 800px;
-            margin: 100px auto;
-            padding: 20px;
-            line-height: 1.6;
-        }
-        h1 { color: #2c3e50; }
-        .subtitle { color: #7f8c8d; font-style: italic; }
-        .status {
-            background: #fff3cd;
-            border: 1px solid #ffc107;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 20px 0;
-        }
-    </style>
-</head>
-<body>
-    <h1>Kaunta (カウンタ)</h1>
-    <p class="subtitle">Analytics without bloat.</p>
-
-    <div class="status">
-        <strong>Status:</strong> Production<br>
-        <strong>Memory:</strong> ~12MB (vs Umami's 200-500MB)<br>
-        <strong>Size:</strong> Single Go binary (vs 300MB node_modules)<br>
-        <strong>React:</strong> None (that's the point)
-    </div>
-
-    <h2>Features</h2>
-    <ul>
-        <li>Privacy-focused visitor tracking</li>
-        <li>Minimal resource usage</li>
-        <li>PostgreSQL backend</li>
-        <li>Real-time analytics dashboard</li>
-    </ul>
-
-    <p style="text-align: center; margin-top: 40px;">
-        <a href="https://github.com/seuros/kaunta">View on GitHub</a>
-    </p>
-</body>
-</html>
-	`)
+func handleIndex(indexTemplate []byte) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		c.Set("Content-Type", "text/html; charset=utf-8")
+		return c.Send(indexTemplate)
+	}
 }
 
 func handleHealth(c *fiber.Ctx) error {

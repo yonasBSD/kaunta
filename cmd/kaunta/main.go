@@ -26,6 +26,9 @@ var countriesGeoJSON []byte
 //go:embed dashboard.html
 var dashboardTemplate []byte
 
+//go:embed index.html
+var indexTemplate []byte
+
 func main() {
 	// Extract version from embedded file
 	version := strings.TrimSpace(versionFile)
@@ -38,6 +41,7 @@ func main() {
 		vendorCSS,
 		countriesGeoJSON,
 		dashboardTemplate,
+		indexTemplate,
 	); err != nil {
 		log.Fatal(err)
 	}
