@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.2](https://github.com/seuros/kaunta/compare/v0.6.1...v0.6.2) (2025-11-07)
+
+
+### Bug Fixes
+
+* build ([d2b2792](https://github.com/seuros/kaunta/commit/d2b279276cd93721ada8fbfff3831fb46c2fc68f))
+* extract index outside ([2f388c1](https://github.com/seuros/kaunta/commit/2f388c187360188693e8bd8d816e2b19e43602ef))
+
 ## [0.6.1](https://github.com/seuros/kaunta/compare/v0.6.0...v0.6.1) (2025-11-07)
 
 
