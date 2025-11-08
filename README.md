@@ -55,6 +55,76 @@ Set `data-debug="true"` to log tracker activity to the browser console while tes
 
 That's it! Analytics start collecting.
 
+## User Management
+
+Kaunta uses CLI-based user management. There is no web registration - all users must be created via the command line.
+
+### Create a User
+
+```bash
+kaunta user create <username>
+# You'll be prompted for name (optional) and password
+# Password must be at least 8 characters
+```
+
+Example:
+```bash
+$ kaunta user create admin
+Full name (optional): Admin User
+Password: ********
+Confirm password: ********
+
+✓ User created successfully
+  ID:       550e8400-e29b-41d4-a716-446655440000
+  Username: admin
+  Name:     Admin User
+  Created:  2025-01-08 14:30:00
+```
+
+You can also provide the name via flag:
+```bash
+kaunta user create admin --name "Admin User"
+```
+
+### List Users
+
+```bash
+kaunta user list
+```
+
+This shows all users with their ID, username, name, and creation date.
+
+### Delete a User
+
+```bash
+kaunta user delete <username>
+# You'll be asked to confirm (use --force to skip)
+```
+
+When you delete a user:
+- All their sessions are invalidated
+- Websites owned by the user become unassigned (user_id set to NULL)
+
+### Reset Password
+
+```bash
+kaunta user reset-password <username>
+# You'll be prompted for the new password
+```
+
+This will:
+- Update the user's password
+- Invalidate all existing sessions (user must log in again)
+
+### Access the Dashboard
+
+After creating a user:
+1. Navigate to `http://your-server:3000/login`
+2. Log in with the username and password
+3. You'll be redirected to `/dashboard`
+
+Sessions last 7 days and use HTTP-only cookies for security.
+
 ## Upgrading Kaunta
 
 When running Kaunta as a standalone binary, you can update it in place without re-downloading releases manually:
