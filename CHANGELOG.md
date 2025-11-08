@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/seuros/kaunta/compare/v0.7.0...v0.7.1) (2025-11-08)
+
+
+### Bug Fixes
+
+* add debug ([23a3009](https://github.com/seuros/kaunta/commit/23a30091c261314e029635038071e7967ed6c71f))
+
 ## [0.7.0](https://github.com/seuros/kaunta/compare/v0.6.2...v0.7.0) (2025-11-07)
 
 
