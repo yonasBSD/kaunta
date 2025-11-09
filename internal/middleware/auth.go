@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"strings"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 
 	"github.com/seuros/kaunta/internal/database"
@@ -22,7 +22,7 @@ type UserContext struct {
 var sessionValidator = validateSessionFromDB
 
 // Auth middleware validates session tokens and loads user context
-func Auth(c *fiber.Ctx) error {
+func Auth(c fiber.Ctx) error {
 	// Extract token from cookie
 	token := c.Cookies("kaunta_session")
 	if token == "" {
@@ -61,7 +61,7 @@ func Auth(c *fiber.Ctx) error {
 }
 
 // AuthWithRedirect middleware validates session tokens and redirects to /login for dashboard routes
-func AuthWithRedirect(c *fiber.Ctx) error {
+func AuthWithRedirect(c fiber.Ctx) error {
 	// Extract token from cookie
 	token := c.Cookies("kaunta_session")
 	if token == "" {
@@ -73,18 +73,18 @@ func AuthWithRedirect(c *fiber.Ctx) error {
 	}
 
 	if token == "" {
-		return c.Redirect("/login")
+		return c.Redirect().To("/login")
 	}
 
 	// Validate session using PostgreSQL function
 	userCtx, err := sessionValidator(hashToken(token))
 
 	if err == sql.ErrNoRows {
-		return c.Redirect("/login")
+		return c.Redirect().To("/login")
 	}
 
 	if err != nil {
-		return c.Redirect("/login")
+		return c.Redirect().To("/login")
 	}
 
 	// Store user context in Fiber locals
@@ -94,7 +94,7 @@ func AuthWithRedirect(c *fiber.Ctx) error {
 }
 
 // GetUser retrieves the authenticated user from context
-func GetUser(c *fiber.Ctx) *UserContext {
+func GetUser(c fiber.Ctx) *UserContext {
 	if user, ok := c.Locals("user").(*UserContext); ok {
 		return user
 	}

@@ -1,14 +1,14 @@
 package handlers
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/seuros/kaunta/internal/database"
 )
 
 // HandleCurrentVisitors returns count of visitors in last 5 minutes
 // GET /api/stats/realtime/:website_id
-func HandleCurrentVisitors(c *fiber.Ctx) error {
+func HandleCurrentVisitors(c fiber.Ctx) error {
 	websiteIDStr := c.Params("website_id")
 	websiteID, err := uuid.Parse(websiteIDStr)
 	if err != nil {

@@ -1,13 +1,13 @@
 package handlers
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/seuros/kaunta/internal/database"
 )
 
 // HandleTimeSeries returns time-series data for charts
-func HandleTimeSeries(c *fiber.Ctx) error {
+func HandleTimeSeries(c fiber.Ctx) error {
 	websiteIDStr := c.Params("website_id")
 	websiteID, err := uuid.Parse(websiteIDStr)
 	if err != nil {
@@ -17,7 +17,7 @@ func HandleTimeSeries(c *fiber.Ctx) error {
 	}
 
 	// Get date range (default 7 days)
-	days := c.QueryInt("days", 7)
+	days := fiber.Query[int](c, "days", 7)
 	if days > 90 {
 		days = 90 // Max 90 days
 	}

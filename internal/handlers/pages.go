@@ -3,13 +3,13 @@ package handlers
 import (
 	"fmt"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/seuros/kaunta/internal/database"
 )
 
 // HandleTopPages returns top pages for the dashboard
-func HandleTopPages(c *fiber.Ctx) error {
+func HandleTopPages(c fiber.Ctx) error {
 	websiteIDStr := c.Params("website_id")
 	websiteID, err := uuid.Parse(websiteIDStr)
 	if err != nil {
@@ -18,7 +18,7 @@ func HandleTopPages(c *fiber.Ctx) error {
 		})
 	}
 
-	limit := c.QueryInt("limit", 10)
+	limit := fiber.Query[int](c, "limit", 10)
 	filterClause, filterArgs := buildFilterClause(c, []interface{}{websiteID})
 
 	// Add limit to args

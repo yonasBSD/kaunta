@@ -7,7 +7,7 @@ import (
 	"encoding/hex"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 
 	"github.com/seuros/kaunta/internal/database"
@@ -30,9 +30,9 @@ type LoginResponse struct {
 }
 
 // HandleLogin authenticates user and creates session
-func HandleLogin(c *fiber.Ctx) error {
+func HandleLogin(c fiber.Ctx) error {
 	var req LoginRequest
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind().Body(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -143,7 +143,7 @@ func HandleLogin(c *fiber.Ctx) error {
 }
 
 // HandleLogout invalidates the current session
-func HandleLogout(c *fiber.Ctx) error {
+func HandleLogout(c fiber.Ctx) error {
 	// Get user from context
 	user := middleware.GetUser(c)
 	if user == nil {
@@ -179,7 +179,7 @@ func HandleLogout(c *fiber.Ctx) error {
 }
 
 // HandleMe returns current user info
-func HandleMe(c *fiber.Ctx) error {
+func HandleMe(c fiber.Ctx) error {
 	user := middleware.GetUser(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{

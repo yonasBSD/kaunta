@@ -2,7 +2,7 @@
 
 package cli
 
-import "github.com/gofiber/fiber/v2"
+import "github.com/gofiber/fiber/v3"
 
 // createFiberConfig returns Fiber configuration for Docker deployments.
 // Prefork is disabled to maintain single-process behavior required for

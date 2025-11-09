@@ -9,12 +9,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/fiber/v2/middleware/csrf"
-	"github.com/gofiber/fiber/v2/middleware/limiter"
-	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/extractors"
+	"github.com/gofiber/fiber/v3/middleware/cors"
+	"github.com/gofiber/fiber/v3/middleware/csrf"
+	"github.com/gofiber/fiber/v3/middleware/healthcheck"
+	"github.com/gofiber/fiber/v3/middleware/limiter"
+	"github.com/gofiber/fiber/v3/middleware/logger"
+	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/spf13/cobra"
 
 	"github.com/seuros/kaunta/internal/config"
@@ -160,34 +162,33 @@ func serveAnalytics(
 	app.Use(recover.New())
 	app.Use(logger.New())
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
-		AllowHeaders: "Origin, Content-Type, Accept, X-CSRF-Token",
-		AllowMethods: "GET, POST, OPTIONS",
+		AllowOrigins: []string{"*"},
+		AllowHeaders: []string{"Origin", "Content-Type", "Accept", "X-CSRF-Token"},
+		AllowMethods: []string{"GET", "POST", "OPTIONS"},
 	}))
 
 	// Add version header to all responses
-	app.Use(func(c *fiber.Ctx) error {
+	app.Use(func(c fiber.Ctx) error {
 		c.Set("X-Kaunta-Version", Version)
 		return c.Next()
 	})
 
 	// CSRF protection middleware
 	app.Use(csrf.New(csrf.Config{
-		KeyLookup:         "header:X-CSRF-Token",
-		CookieName:        "kaunta_csrf",
-		CookieSameSite:    "Lax",
-		CookieHTTPOnly:    true,
-		CookieSecure:      false, // Will be set dynamically based on protocol
-		Expiration:        7 * 24 * time.Hour,
-		HandlerContextKey: "csrf", // Make token available to handlers via c.Locals("csrf")
+		Extractor:      extractors.FromHeader("X-CSRF-Token"),
+		CookieName:     "kaunta_csrf",
+		CookieSameSite: "Lax",
+		CookieHTTPOnly: false, // Must be false to allow JavaScript to read token
+		CookieSecure:   false, // Will be set dynamically based on protocol
+		IdleTimeout:    7 * 24 * time.Hour,
 		// Skip CSRF protection for tracking endpoint (public API)
-		Next: func(c *fiber.Ctx) bool {
+		Next: func(c fiber.Ctx) bool {
 			return c.Path() == "/api/send"
 		},
 	}))
 
 	// Static assets - serve embedded JS/CSS files
-	app.Get("/assets/vendor/:filename<*>", func(c *fiber.Ctx) error {
+	app.Get("/assets/vendor/:filename<*>", func(c fiber.Ctx) error {
 		filename := c.Params("filename")
 		// Strip query string if present
 		if idx := strings.Index(filename, "?"); idx > -1 {
@@ -210,7 +211,7 @@ func serveAnalytics(
 	})
 
 	// Static data files
-	app.Get("/assets/data/:filename<*>", func(c *fiber.Ctx) error {
+	app.Get("/assets/data/:filename<*>", func(c fiber.Ctx) error {
 		filename := c.Params("filename")
 		// Strip query string if present
 		if idx := strings.Index(filename, "?"); idx > -1 {
@@ -232,7 +233,11 @@ func serveAnalytics(
 	// Routes
 	app.Get("/", handleIndex(indexTemplate))
 	app.Get("/health", handleHealth)
-	app.Get("/up", handleUp) // Docker health check
+	app.Get("/up", healthcheck.New(healthcheck.Config{
+		Probe: func(c fiber.Ctx) bool {
+			return pingDatabase() == nil
+		},
+	}))
 	app.Get("/api/version", handleVersion)
 
 	// Tracker script
@@ -241,7 +246,7 @@ func serveAnalytics(
 	app.Get("/script.js", handleTrackerScript(trackerScript)) // Umami-compatible alias
 
 	// Tracking API (Umami-compatible)
-	app.Options("/api/send", func(c *fiber.Ctx) error {
+	app.Options("/api/send", func(c fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusOK)
 	})
 	app.Post("/api/send", handlers.HandleTracking)
@@ -251,7 +256,7 @@ func serveAnalytics(
 
 	// Auth API endpoints (public)
 	// CSRF token endpoint
-	app.Get("/api/auth/csrf", func(c *fiber.Ctx) error {
+	app.Get("/api/auth/csrf", func(c fiber.Ctx) error {
 		token := ""
 		if csrfToken := c.Locals("csrf"); csrfToken != nil {
 			if str, ok := csrfToken.(string); ok {
@@ -267,10 +272,10 @@ func serveAnalytics(
 	loginLimiter := limiter.New(limiter.Config{
 		Max:        5,
 		Expiration: 1 * time.Minute,
-		KeyGenerator: func(c *fiber.Ctx) string {
+		KeyGenerator: func(c fiber.Ctx) string {
 			return c.IP()
 		},
-		LimitReached: func(c *fiber.Ctx) error {
+		LimitReached: func(c fiber.Ctx) error {
 			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
 				"success": false,
 				"error":   "Too many login attempts. Please try again later.",
@@ -281,15 +286,15 @@ func serveAnalytics(
 	app.Post("/api/auth/login", loginLimiter, handlers.HandleLogin)
 
 	// Login page (public)
-	app.Get("/login", func(c *fiber.Ctx) error {
+	app.Get("/login", func(c fiber.Ctx) error {
 		c.Set("Content-Type", "text/html; charset=utf-8")
-		// Extract CSRF token from middleware
+		// Extract CSRF token from middleware (Fiber v3 uses csrf.TokenFromContext)
 		csrfToken := csrf.TokenFromContext(c)
 		return c.SendString(loginPageHTML(csrfToken))
 	})
 
 	// Dashboard UI (protected)
-	app.Get("/dashboard", middleware.AuthWithRedirect, func(c *fiber.Ctx) error {
+	app.Get("/dashboard", middleware.AuthWithRedirect, func(c fiber.Ctx) error {
 		c.Set("Content-Type", "text/html; charset=utf-8")
 		// Replace Go template variables in embedded HTML
 		html := strings.ReplaceAll(string(dashboardTemplate), "{{.Title}}", "Kaunta Dashboard")
@@ -325,13 +330,13 @@ func serveAnalytics(
 // Handler functions
 
 func handleIndex(indexTemplate []byte) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		c.Set("Content-Type", "text/html; charset=utf-8")
 		return c.Send(indexTemplate)
 	}
 }
 
-func handleHealth(c *fiber.Ctx) error {
+func handleHealth(c fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"status":  "healthy",
 		"service": "kaunta",
@@ -347,16 +352,7 @@ var pingDatabase = func() error {
 	return database.DB.Ping()
 }
 
-func handleUp(c *fiber.Ctx) error {
-	// Simple Docker health check endpoint
-	// Returns 200 OK if server is running and can connect to database
-	if err := pingDatabase(); err != nil {
-		return c.Status(503).SendString("database unavailable")
-	}
-	return c.SendStatus(200)
-}
-
-func handleVersion(c *fiber.Ctx) error {
+func handleVersion(c fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"version": Version,
 	})
@@ -367,7 +363,7 @@ func handleTrackerScript(trackerScript []byte) fiber.Handler {
 	hash := sha256.Sum256(trackerScript)
 	etag := "\"" + hex.EncodeToString(hash[:8]) + "\""
 
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		// Security headers
 		c.Set("Content-Type", "application/javascript; charset=utf-8")
 		c.Set("X-Content-Type-Options", "nosniff")

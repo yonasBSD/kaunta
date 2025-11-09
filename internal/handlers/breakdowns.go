@@ -3,20 +3,20 @@ package handlers
 import (
 	"fmt"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/seuros/kaunta/internal/database"
 )
 
 // HandleTopReferrers returns top referrers breakdown
-func HandleTopReferrers(c *fiber.Ctx) error {
+func HandleTopReferrers(c fiber.Ctx) error {
 	websiteIDStr := c.Params("website_id")
 	websiteID, err := uuid.Parse(websiteIDStr)
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid website ID"})
 	}
 
-	limit := c.QueryInt("limit", 10)
+	limit := fiber.Query[int](c, "limit", 10)
 	filterClause, filterArgs := buildFilterClause(c, []interface{}{websiteID})
 
 	// Add limit to args
@@ -56,14 +56,14 @@ func HandleTopReferrers(c *fiber.Ctx) error {
 }
 
 // HandleTopBrowsers returns top browsers breakdown
-func HandleTopBrowsers(c *fiber.Ctx) error {
+func HandleTopBrowsers(c fiber.Ctx) error {
 	websiteIDStr := c.Params("website_id")
 	websiteID, err := uuid.Parse(websiteIDStr)
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid website ID"})
 	}
 
-	limit := c.QueryInt("limit", 10)
+	limit := fiber.Query[int](c, "limit", 10)
 	filterClause, filterArgs := buildFilterClause(c, []interface{}{websiteID})
 
 	// Add limit to args
@@ -101,14 +101,14 @@ func HandleTopBrowsers(c *fiber.Ctx) error {
 }
 
 // HandleTopDevices returns top devices breakdown
-func HandleTopDevices(c *fiber.Ctx) error {
+func HandleTopDevices(c fiber.Ctx) error {
 	websiteIDStr := c.Params("website_id")
 	websiteID, err := uuid.Parse(websiteIDStr)
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid website ID"})
 	}
 
-	limit := c.QueryInt("limit", 10)
+	limit := fiber.Query[int](c, "limit", 10)
 	filterClause, filterArgs := buildFilterClause(c, []interface{}{websiteID})
 
 	// Add limit to args
@@ -146,14 +146,14 @@ func HandleTopDevices(c *fiber.Ctx) error {
 }
 
 // HandleTopCountries returns top countries breakdown
-func HandleTopCountries(c *fiber.Ctx) error {
+func HandleTopCountries(c fiber.Ctx) error {
 	websiteIDStr := c.Params("website_id")
 	websiteID, err := uuid.Parse(websiteIDStr)
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid website ID"})
 	}
 
-	limit := c.QueryInt("limit", 10)
+	limit := fiber.Query[int](c, "limit", 10)
 	filterClause, filterArgs := buildFilterClause(c, []interface{}{websiteID})
 
 	// Add limit to args
@@ -191,14 +191,14 @@ func HandleTopCountries(c *fiber.Ctx) error {
 }
 
 // HandleTopCities returns top cities breakdown
-func HandleTopCities(c *fiber.Ctx) error {
+func HandleTopCities(c fiber.Ctx) error {
 	websiteIDStr := c.Params("website_id")
 	websiteID, err := uuid.Parse(websiteIDStr)
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid website ID"})
 	}
 
-	limit := c.QueryInt("limit", 10)
+	limit := fiber.Query[int](c, "limit", 10)
 	filterClause, filterArgs := buildFilterClause(c, []interface{}{websiteID})
 
 	// Add limit to args
@@ -236,14 +236,14 @@ func HandleTopCities(c *fiber.Ctx) error {
 }
 
 // HandleTopRegions returns top regions breakdown
-func HandleTopRegions(c *fiber.Ctx) error {
+func HandleTopRegions(c fiber.Ctx) error {
 	websiteIDStr := c.Params("website_id")
 	websiteID, err := uuid.Parse(websiteIDStr)
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid website ID"})
 	}
 
-	limit := c.QueryInt("limit", 10)
+	limit := fiber.Query[int](c, "limit", 10)
 	filterClause, filterArgs := buildFilterClause(c, []interface{}{websiteID})
 
 	// Add limit to args
@@ -281,7 +281,7 @@ func HandleTopRegions(c *fiber.Ctx) error {
 }
 
 // HandleMapData returns visitor data aggregated by country for choropleth maps
-func HandleMapData(c *fiber.Ctx) error {
+func HandleMapData(c fiber.Ctx) error {
 	websiteIDStr := c.Params("website_id")
 	websiteID, err := uuid.Parse(websiteIDStr)
 	if err != nil {
@@ -289,7 +289,7 @@ func HandleMapData(c *fiber.Ctx) error {
 	}
 
 	// Get date range (default 7 days, clamp between 1 and 90)
-	days := min(max(c.QueryInt("days", 7), 1), 90)
+	days := min(max(fiber.Query[int](c, "days", 7), 1), 90)
 
 	// Build filter clause
 	baseArgs := []interface{}{websiteID, days}

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/seuros/kaunta/internal/database"
 	"github.com/seuros/kaunta/internal/geoip"
@@ -62,9 +62,9 @@ type PayloadData struct {
 }
 
 // HandleTracking is the /api/send endpoint - compatible with Umami
-func HandleTracking(c *fiber.Ctx) error {
+func HandleTracking(c fiber.Ctx) error {
 	var payload TrackingPayload
-	if err := c.BodyParser(&payload); err != nil {
+	if err := c.Bind().Body(&payload); err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"error": "Invalid JSON payload",
 		})
@@ -479,7 +479,7 @@ func geoIPLookup(ip string) (country, city, region string) {
 // - "none": direct connection IP (default)
 // - "xforwarded": X-Forwarded-For header (first IP from comma-separated list)
 // - "cloudflare": CF-Connecting-IP header (Cloudflare)
-func getClientIP(c *fiber.Ctx, proxyMode string) string {
+func getClientIP(c fiber.Ctx, proxyMode string) string {
 	switch proxyMode {
 	case "cloudflare":
 		if cfIP := c.Get("CF-Connecting-IP"); cfIP != "" {
