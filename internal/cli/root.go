@@ -154,9 +154,7 @@ func serveAnalytics(
 	if Version != "" {
 		appName = fmt.Sprintf("Kaunta v%s - Analytics without bloat", Version)
 	}
-	app := fiber.New(fiber.Config{
-		AppName: appName,
-	})
+	app := fiber.New(createFiberConfig(appName))
 
 	// Middleware
 	app.Use(recover.New())
