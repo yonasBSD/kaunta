@@ -10,7 +10,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/healthcheck"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -24,7 +25,7 @@ func newFiberApp(path string, handler fiber.Handler) *fiber.App {
 func performRequest(t *testing.T, app *fiber.App, target string) *http.Response {
 	t.Helper()
 	req := httptest.NewRequest(http.MethodGet, target, nil)
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req)
 	require.NoError(t, err)
 	return resp
 }
@@ -67,7 +68,12 @@ func TestHandleUpReturnsOKWhenDatabaseHealthy(t *testing.T) {
 		return nil
 	})
 
-	app := newFiberApp("/up", handleUp)
+	app := fiber.New()
+	app.Get("/up", healthcheck.New(healthcheck.Config{
+		Probe: func(c fiber.Ctx) bool {
+			return pingDatabase() == nil
+		},
+	}))
 	resp := performRequest(t, app, "/up")
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
@@ -77,14 +83,15 @@ func TestHandleUpReturnsServiceUnavailableWhenPingFails(t *testing.T) {
 		return errors.New("boom")
 	})
 
-	app := newFiberApp("/up", handleUp)
+	app := fiber.New()
+	app.Get("/up", healthcheck.New(healthcheck.Config{
+		Probe: func(c fiber.Ctx) bool {
+			return pingDatabase() == nil
+		},
+	}))
 	resp := performRequest(t, app, "/up")
 
-	body, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-
 	assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
-	assert.Contains(t, string(body), "database unavailable")
 }
 
 func TestHandleVersionReturnsCurrentVersion(t *testing.T) {

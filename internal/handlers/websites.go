@@ -1,12 +1,12 @@
 package handlers
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/seuros/kaunta/internal/database"
 )
 
 // HandleWebsites returns list of all websites
-func HandleWebsites(c *fiber.Ctx) error {
+func HandleWebsites(c fiber.Ctx) error {
 	rows, err := database.DB.Query(`
 		SELECT website_id, domain, name
 		FROM website

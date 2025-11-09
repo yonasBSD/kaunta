@@ -11,7 +11,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/seuros/kaunta/internal/database"
 	"github.com/stretchr/testify/require"
 )

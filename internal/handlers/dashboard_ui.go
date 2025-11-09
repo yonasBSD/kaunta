@@ -3,11 +3,11 @@ package handlers
 import (
 	"strings"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // HandleDashboard renders the dashboard UI
-func HandleDashboard(c *fiber.Ctx) error {
+func HandleDashboard(c fiber.Ctx) error {
 	c.Set("Content-Type", "text/html; charset=utf-8")
 	return c.Render("dashboard", fiber.Map{
 		"Title": "Kaunta Dashboard",

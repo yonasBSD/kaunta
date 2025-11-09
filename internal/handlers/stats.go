@@ -3,13 +3,13 @@ package handlers
 import (
 	"fmt"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/seuros/kaunta/internal/database"
 )
 
 // HandleDashboardStats returns aggregated stats for the dashboard
-func HandleDashboardStats(c *fiber.Ctx) error {
+func HandleDashboardStats(c fiber.Ctx) error {
 	websiteIDStr := c.Params("website_id")
 	websiteID, err := uuid.Parse(websiteIDStr)
 	if err != nil {

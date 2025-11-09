@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -35,7 +35,7 @@ func newTestAppWithRedirect(handler fiber.Handler) *fiber.App {
 	app := fiber.New()
 	app.Use(AuthWithRedirect)
 	app.Get("/", handler)
-	app.Get("/login", func(c *fiber.Ctx) error {
+	app.Get("/login", func(c fiber.Ctx) error {
 		return c.SendString("login page")
 	})
 	return app
@@ -56,12 +56,12 @@ func TestGetUserWithoutContextReturnsNil(t *testing.T) {
 }
 
 func TestAuthMissingTokenReturnsUnauthorized(t *testing.T) {
-	app := newTestApp(func(c *fiber.Ctx) error {
+	app := newTestApp(func(c fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusOK)
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode)
 
@@ -77,14 +77,14 @@ func TestAuthInvalidSessionFromDB(t *testing.T) {
 		return nil, sql.ErrNoRows
 	})
 
-	app := newTestApp(func(c *fiber.Ctx) error {
+	app := newTestApp(func(c fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusOK)
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.AddCookie(&http.Cookie{Name: "kaunta_session", Value: token})
 
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode)
 
@@ -98,14 +98,14 @@ func TestAuthDatabaseError(t *testing.T) {
 		return nil, errors.New("boom")
 	})
 
-	app := newTestApp(func(c *fiber.Ctx) error {
+	app := newTestApp(func(c fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusOK)
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.AddCookie(&http.Cookie{Name: "kaunta_session", Value: "token"})
 
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
 
@@ -128,7 +128,7 @@ func TestAuthSuccessStoresUserContext(t *testing.T) {
 
 	var capturedUser *UserContext
 
-	app := newTestApp(func(c *fiber.Ctx) error {
+	app := newTestApp(func(c fiber.Ctx) error {
 		capturedUser = GetUser(c)
 		return c.SendStatus(fiber.StatusOK)
 	})
@@ -136,7 +136,7 @@ func TestAuthSuccessStoresUserContext(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.AddCookie(&http.Cookie{Name: "kaunta_session", Value: "good-token"})
 
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 	require.NotNil(t, capturedUser)
@@ -155,27 +155,27 @@ func TestAuthUsesAuthorizationHeader(t *testing.T) {
 		}, nil
 	})
 
-	app := newTestApp(func(c *fiber.Ctx) error {
+	app := newTestApp(func(c fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusOK)
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("Authorization", "Bearer bearer-token")
 
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 }
 
 func TestAuthWithRedirectNoToken(t *testing.T) {
-	app := newTestAppWithRedirect(func(c *fiber.Ctx) error {
+	app := newTestAppWithRedirect(func(c fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusOK)
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req)
 	require.NoError(t, err)
-	assert.Equal(t, fiber.StatusFound, resp.StatusCode)
+	assert.Equal(t, fiber.StatusSeeOther, resp.StatusCode)
 	assert.Equal(t, "/login", resp.Header.Get("Location"))
 }
 
@@ -184,14 +184,14 @@ func TestAuthWithRedirectValidToken(t *testing.T) {
 		return &UserContext{UserID: uuid.New(), Username: "test"}, nil
 	})
 
-	app := newTestAppWithRedirect(func(c *fiber.Ctx) error {
+	app := newTestAppWithRedirect(func(c fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusOK)
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.AddCookie(&http.Cookie{Name: "kaunta_session", Value: "token"})
 
-	resp, err := app.Test(req, -1)
+	resp, err := app.Test(req)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 }

@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // buildFilterClause creates SQL WHERE conditions and args from query params
-func buildFilterClause(c *fiber.Ctx, baseArgs []interface{}) (string, []interface{}) {
+func buildFilterClause(c fiber.Ctx, baseArgs []interface{}) (string, []interface{}) {
 	var conditions []string
 	args := baseArgs
 
