@@ -673,7 +673,7 @@ func loginPageHTML() string {
               'Content-Type': 'application/json',
               'X-CSRF-Token': csrfToken,
             },
-            credentials: 'same-origin',
+            credentials: 'include',
             body: JSON.stringify({ username, password }),
           });
 
