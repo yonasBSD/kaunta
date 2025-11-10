@@ -77,6 +77,14 @@ func NewTestDB(t *testing.T) *TestDB {
 
 	// Create isolated test database using template cloning
 	// This is much faster than running migrations for each test (~20ms per test)
+	// Use the same user for both admin operations and test database connections
+	// to avoid needing to create a separate pgtdbuser in CI
+	testRole := &pgtestdb.Role{
+		Username:     user,
+		Password:     password,
+		Capabilities: "NOSUPERUSER NOCREATEDB NOCREATEROLE",
+	}
+
 	db := pgtestdb.New(t, pgtestdb.Config{
 		DriverName: "pgx",
 		Host:       host,
@@ -85,6 +93,7 @@ func NewTestDB(t *testing.T) *TestDB {
 		Password:   password,
 		Database:   database,
 		Options:    options,
+		TestRole:   testRole,
 	}, golangmigrator.New(migrationsPath))
 
 	return &TestDB{
