@@ -4,8 +4,10 @@ package test
 import (
 	"context"
 	"database/sql"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -45,15 +47,44 @@ func NewTestDB(t *testing.T) *TestDB {
 		currentPath = parent
 	}
 
+	// Get database URL from environment or construct default
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		databaseURL = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
+	}
+
+	// Parse DATABASE_URL to extract connection parameters
+	parsedURL, err := url.Parse(databaseURL)
+	if err != nil {
+		t.Fatalf("failed to parse DATABASE_URL: %v", err)
+	}
+
+	host := parsedURL.Hostname()
+	port := parsedURL.Port()
+	if port == "" {
+		port = "5432"
+	}
+
+	user := parsedURL.User.Username()
+	password, _ := parsedURL.User.Password()
+
+	database := strings.TrimPrefix(parsedURL.Path, "/")
+	if database == "" {
+		database = "postgres"
+	}
+
+	options := parsedURL.RawQuery
+
 	// Create isolated test database using template cloning
 	// This is much faster than running migrations for each test (~20ms per test)
 	db := pgtestdb.New(t, pgtestdb.Config{
 		DriverName: "pgx",
-		Host:       "localhost",
-		User:       "postgres",
-		Password:   "postgres",
-		Port:       "5432",
-		Options:    "sslmode=disable",
+		Host:       host,
+		Port:       port,
+		User:       user,
+		Password:   password,
+		Database:   database,
+		Options:    options,
 	}, golangmigrator.New(migrationsPath))
 
 	return &TestDB{
