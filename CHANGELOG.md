@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.8](https://github.com/seuros/kaunta/compare/v0.14.7...v0.14.8) (2025-11-10)
+
+
+### Bug Fixes
+
+* use SameSite=None for CSRF cookie ([e735470](https://github.com/seuros/kaunta/commit/e735470340e3e5b0edcb19069c801865eb7deb56))
+
 ## [0.14.7](https://github.com/seuros/kaunta/compare/v0.14.6...v0.14.7) (2025-11-10)
 
 
