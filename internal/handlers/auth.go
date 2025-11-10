@@ -110,13 +110,14 @@ func HandleLogin(c fiber.Ctx) error {
 	}
 
 	// Set session cookie
+	// Using SameSite=None for cross-domain support with trusted origins
 	c.Cookie(&fiber.Cookie{
 		Name:     "kaunta_session",
 		Value:    token,
 		Expires:  expiresAt,
 		HTTPOnly: true,
-		Secure:   c.Protocol() == "https",
-		SameSite: "Lax",
+		Secure:   true, // Required for SameSite=None
+		SameSite: "None",
 		Path:     "/",
 	})
 
@@ -167,8 +168,8 @@ func HandleLogout(c fiber.Ctx) error {
 		Value:    "",
 		Expires:  time.Now().Add(-1 * time.Hour),
 		HTTPOnly: true,
-		Secure:   c.Protocol() == "https",
-		SameSite: "Lax",
+		Secure:   true, // Required for SameSite=None
+		SameSite: "None",
 		Path:     "/",
 	})
 

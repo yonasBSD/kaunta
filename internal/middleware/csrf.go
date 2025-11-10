@@ -1,0 +1,117 @@
+package middleware
+
+import (
+	"log"
+	"sync"
+	"time"
+
+	"github.com/gofiber/fiber/v3"
+	"github.com/seuros/kaunta/internal/database"
+)
+
+// TrustedOriginsCache manages cached trusted origins with TTL
+type TrustedOriginsCache struct {
+	origins   []string
+	lastFetch time.Time
+	mu        sync.RWMutex
+	ttl       time.Duration
+}
+
+var (
+	originsCache = &TrustedOriginsCache{
+		ttl: 5 * time.Minute, // Cache for 5 minutes
+	}
+)
+
+// loadTrustedOrigins fetches trusted origins from database
+func (c *TrustedOriginsCache) loadTrustedOrigins() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Check if cache is still valid
+	if time.Since(c.lastFetch) < c.ttl && len(c.origins) > 0 {
+		return nil
+	}
+
+	// Fetch from database using PostgreSQL function
+	rows, err := database.DB.Query("SELECT unnest(get_trusted_origins())")
+	if err != nil {
+		return err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var origins []string
+	for rows.Next() {
+		var domain string
+		if err := rows.Scan(&domain); err != nil {
+			return err
+		}
+		origins = append(origins, domain)
+	}
+
+	if err = rows.Err(); err != nil {
+		return err
+	}
+
+	c.origins = origins
+	c.lastFetch = time.Now()
+
+	log.Printf("Loaded %d trusted origins into cache", len(origins))
+	return nil
+}
+
+// GetTrustedOrigins returns cached trusted origins, refreshing if needed
+func (c *TrustedOriginsCache) GetTrustedOrigins() ([]string, error) {
+	// Try to load/refresh cache
+	if err := c.loadTrustedOrigins(); err != nil {
+		// If database fails, try to use stale cache
+		c.mu.RLock()
+		defer c.mu.RUnlock()
+
+		if len(c.origins) > 0 {
+			log.Printf("Warning: using stale cache due to database error: %v", err)
+			return c.origins, nil
+		}
+		return nil, err
+	}
+
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.origins, nil
+}
+
+// GetTrustedOrigins is a package-level function that returns cached trusted origins
+func GetTrustedOrigins() ([]string, error) {
+	return originsCache.GetTrustedOrigins()
+}
+
+// ForceRefresh immediately refreshes the cache from database
+func (c *TrustedOriginsCache) ForceRefresh() error {
+	c.mu.Lock()
+	c.lastFetch = time.Time{} // Reset last fetch time
+	c.mu.Unlock()
+
+	return c.loadTrustedOrigins()
+}
+
+// RefreshTrustedOrigins is a middleware that can be used to force cache refresh
+// Useful for admin endpoints that modify trusted origins
+func RefreshTrustedOrigins() fiber.Handler {
+	return func(c fiber.Ctx) error {
+		if err := originsCache.ForceRefresh(); err != nil {
+			log.Printf("Failed to refresh trusted origins cache: %v", err)
+		}
+		return c.Next()
+	}
+}
+
+// InitTrustedOriginsCache initializes the cache at startup
+func InitTrustedOriginsCache() error {
+	log.Println("Initializing trusted origins cache...")
+	if err := originsCache.ForceRefresh(); err != nil {
+		log.Printf("Warning: failed to initialize trusted origins cache: %v", err)
+		// Don't fail startup if no trusted origins exist yet
+		return nil
+	}
+	return nil
+}
