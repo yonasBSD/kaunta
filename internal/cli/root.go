@@ -137,6 +137,12 @@ func serveAnalytics(
 		}
 	}()
 
+	// Initialize trusted origins cache from database
+	log.Println("Initializing trusted origins cache...")
+	if err := middleware.InitTrustedOriginsCache(); err != nil {
+		log.Printf("⚠️  Warning: failed to initialize trusted origins cache: %v", err)
+	}
+
 	// Initialize GeoIP database (downloads if missing)
 	dataDir := os.Getenv("DATA_DIR")
 	if dataDir == "" {
@@ -176,13 +182,12 @@ func serveAnalytics(
 		return c.Next()
 	})
 
-	// CSRF protection middleware - get trusted origins from env
-	trustedOrigins := strings.Split(getEnv("TRUSTED_ORIGINS", ""), ",")
-	var filteredOrigins []string
-	for _, origin := range trustedOrigins {
-		if trimmed := strings.TrimSpace(origin); trimmed != "" {
-			filteredOrigins = append(filteredOrigins, trimmed)
-		}
+	// CSRF protection middleware - use database-backed trusted origins
+	// Get initial trusted origins from cache
+	trustedOrigins, err := middleware.GetTrustedOrigins()
+	if err != nil {
+		log.Printf("⚠️  Warning: failed to get trusted origins: %v", err)
+		trustedOrigins = []string{} // Empty list if error
 	}
 
 	app.Use(csrf.New(csrf.Config{
@@ -192,8 +197,8 @@ func serveAnalytics(
 		CookieHTTPOnly: false, // Must be false to allow JavaScript to read token
 		CookieSecure:   true,  // Required for SameSite=None
 		IdleTimeout:    7 * 24 * time.Hour,
-		Session:        nil, // Use cookie-based tokens, not session
-		TrustedOrigins: filteredOrigins,
+		Session:        nil,            // Use cookie-based tokens, not session
+		TrustedOrigins: trustedOrigins, // Loaded from database
 		// Skip CSRF protection for tracking endpoint (public API)
 		Next: func(c fiber.Ctx) bool {
 			return c.Path() == "/api/send"
