@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"errors"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
@@ -29,6 +30,22 @@ type LoginResponse struct {
 	} `json:"user,omitempty"`
 }
 
+type userRecord struct {
+	UserID       uuid.UUID
+	Username     string
+	Name         sql.NullString
+	PasswordHash string
+}
+
+var (
+	fetchUserByUsername    = fetchUserFromDB
+	verifyPasswordHashFunc = verifyPasswordInDB
+	insertSessionFunc      = insertSessionInDB
+	sessionTokenGenerator  = generateSessionToken
+	deleteSessionFunc      = deleteSessionInDB
+	fetchUserDetailsFunc   = fetchUserDetailsFromDB
+)
+
 // HandleLogin authenticates user and creates session
 func HandleLogin(c fiber.Ctx) error {
 	var req LoginRequest
@@ -45,20 +62,8 @@ func HandleLogin(c fiber.Ctx) error {
 		})
 	}
 
-	// Get user and verify password using PostgreSQL function
-	var userID uuid.UUID
-	var username string
-	var name sql.NullString
-	var passwordHash string
-
-	query := `
-		SELECT user_id, username, name, password_hash
-		FROM users
-		WHERE username = $1
-	`
-
-	err := database.DB.QueryRow(query, req.Username).Scan(&userID, &username, &name, &passwordHash)
-	if err == sql.ErrNoRows {
+	user, err := fetchUserByUsername(req.Username)
+	if errors.Is(err, sql.ErrNoRows) {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"error": "Invalid username or password",
 		})
@@ -70,8 +75,7 @@ func HandleLogin(c fiber.Ctx) error {
 	}
 
 	// Verify password using PostgreSQL function
-	var passwordValid bool
-	err = database.DB.QueryRow("SELECT verify_password($1, $2)", req.Password, passwordHash).Scan(&passwordValid)
+	passwordValid, err := verifyPasswordHashFunc(req.Password, user.PasswordHash)
 	if err != nil || !passwordValid {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"error": "Invalid username or password",
@@ -79,7 +83,7 @@ func HandleLogin(c fiber.Ctx) error {
 	}
 
 	// Generate session token
-	token, tokenHash, err := generateSessionToken()
+	token, tokenHash, err := sessionTokenGenerator()
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to create session",
@@ -97,13 +101,7 @@ func HandleLogin(c fiber.Ctx) error {
 	}
 	ipAddress := c.IP()
 
-	insertQuery := `
-		INSERT INTO user_sessions (session_id, user_id, token_hash, expires_at, user_agent, ip_address)
-		VALUES ($1, $2, $3, $4, $5, $6)
-	`
-
-	_, err = database.DB.Exec(insertQuery, sessionID, userID, tokenHash, expiresAt, userAgent, ipAddress)
-	if err != nil {
+	if err := insertSessionFunc(sessionID, user.UserID, tokenHash, expiresAt, userAgent, ipAddress); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to create session",
 		})
@@ -130,13 +128,13 @@ func HandleLogin(c fiber.Ctx) error {
 			Username string    `json:"username"`
 			Name     *string   `json:"name,omitempty"`
 		}{
-			UserID:   userID,
-			Username: username,
+			UserID:   user.UserID,
+			Username: user.Username,
 		},
 	}
 
-	if name.Valid {
-		nameStr := name.String
+	if user.Name.Valid {
+		nameStr := user.Name.String
 		response.User.Name = &nameStr
 	}
 
@@ -154,9 +152,7 @@ func HandleLogout(c fiber.Ctx) error {
 	}
 
 	// Delete session from database
-	query := `DELETE FROM user_sessions WHERE session_id = $1`
-	_, err := database.DB.Exec(query, user.SessionID)
-	if err != nil {
+	if err := deleteSessionFunc(user.SessionID); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to logout",
 		})
@@ -189,11 +185,7 @@ func HandleMe(c fiber.Ctx) error {
 	}
 
 	// Get full user details
-	var name sql.NullString
-	var createdAt time.Time
-
-	query := `SELECT name, created_at FROM users WHERE user_id = $1`
-	err := database.DB.QueryRow(query, user.UserID).Scan(&name, &createdAt)
+	name, createdAt, err := fetchUserDetailsFunc(user.UserID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to get user info",
@@ -211,6 +203,63 @@ func HandleMe(c fiber.Ctx) error {
 	}
 
 	return c.JSON(result)
+}
+
+func fetchUserFromDB(username string) (*userRecord, error) {
+	query := `
+		SELECT user_id, username, name, password_hash
+		FROM users
+		WHERE username = $1
+	`
+
+	var record userRecord
+	err := database.DB.QueryRow(query, username).Scan(
+		&record.UserID,
+		&record.Username,
+		&record.Name,
+		&record.PasswordHash,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &record, nil
+}
+
+func verifyPasswordInDB(password, passwordHash string) (bool, error) {
+	var passwordValid bool
+	err := database.DB.QueryRow("SELECT verify_password($1, $2)", password, passwordHash).Scan(&passwordValid)
+	if err != nil {
+		return false, err
+	}
+	return passwordValid, nil
+}
+
+func insertSessionInDB(sessionID uuid.UUID, userID uuid.UUID, tokenHash string, expiresAt time.Time, userAgent, ipAddress string) error {
+	insertQuery := `
+		INSERT INTO user_sessions (session_id, user_id, token_hash, expires_at, user_agent, ip_address)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`
+
+	_, err := database.DB.Exec(insertQuery, sessionID, userID, tokenHash, expiresAt, userAgent, ipAddress)
+	return err
+}
+
+func deleteSessionInDB(sessionID uuid.UUID) error {
+	query := `DELETE FROM user_sessions WHERE session_id = $1`
+	_, err := database.DB.Exec(query, sessionID)
+	return err
+}
+
+func fetchUserDetailsFromDB(userID uuid.UUID) (sql.NullString, time.Time, error) {
+	var name sql.NullString
+	var createdAt time.Time
+
+	query := `SELECT name, created_at FROM users WHERE user_id = $1`
+	err := database.DB.QueryRow(query, userID).Scan(&name, &createdAt)
+	if err != nil {
+		return sql.NullString{}, time.Time{}, err
+	}
+	return name, createdAt, nil
 }
 
 // generateSessionToken creates a random session token and its hash
