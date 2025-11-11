@@ -166,7 +166,12 @@ func serveAnalytics(
 
 	// Middleware
 	app.Use(recover.New())
-	app.Use(logger.New())
+	app.Use(logger.New(logger.Config{
+		Skip: func(c fiber.Ctx) bool {
+			path := c.Path()
+			return path == "/up" || path == "/health" // Skip healthcheck logs
+		},
+	}))
 	app.Use(cors.New(cors.Config{
 		AllowOriginsFunc: func(origin string) bool {
 			return true // Allow all origins

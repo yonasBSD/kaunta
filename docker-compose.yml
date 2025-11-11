@@ -28,7 +28,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "/kaunta", "-v"]
+      test: ["CMD", "/kaunta", "healthcheck"]
       interval: 30s
       timeout: 3s
       retries: 3
