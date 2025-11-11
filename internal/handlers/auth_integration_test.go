@@ -47,6 +47,10 @@ func integrationDB(t *testing.T) *sql.DB {
 		t.Skipf("integration DB unreachable: %v", err)
 	}
 
+	if err := database.RunMigrations(dsn); err != nil {
+		t.Fatalf("failed to run migrations for integration DB: %v", err)
+	}
+
 	t.Cleanup(func() {
 		_ = db.Close()
 	})
