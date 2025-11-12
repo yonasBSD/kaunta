@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
@@ -10,9 +11,11 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
+
 	"github.com/seuros/kaunta/internal/database"
 	"github.com/seuros/kaunta/internal/geoip"
 	"github.com/seuros/kaunta/internal/logging"
+	"github.com/seuros/kaunta/internal/realtime"
 )
 
 const MaxURLSize = 2000 // Max URL length (Plausible standard)
@@ -216,6 +219,27 @@ func HandleTracking(c fiber.Ctx) error {
 				"error": "Failed to save event: " + err.Error(),
 			})
 		}
+
+		eventPath := ""
+		if payload.Payload.URL != nil {
+			eventPath = *payload.Payload.URL
+		}
+		eventTitle := ""
+		if payload.Payload.Title != nil {
+			eventTitle = *payload.Payload.Title
+		}
+		realtime.NotifyEvent(
+			context.Background(),
+			realtime.NewEventPayload(
+				payload.Type,
+				websiteID,
+				sessionID,
+				visitID,
+				eventPath,
+				eventTitle,
+				createdAt,
+			),
+		)
 
 		// Return 202 Accepted (acknowledges receipt, not completion)
 		return c.Status(202).JSON(fiber.Map{

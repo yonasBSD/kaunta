@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gofiber/contrib/v3/websocket"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/extractors"
 	"github.com/gofiber/fiber/v3/middleware/cors"
@@ -24,6 +26,7 @@ import (
 	"github.com/seuros/kaunta/internal/handlers"
 	"github.com/seuros/kaunta/internal/logging"
 	"github.com/seuros/kaunta/internal/middleware"
+	"github.com/seuros/kaunta/internal/realtime"
 )
 
 var Version string
@@ -137,6 +140,17 @@ func serveAnalytics(
 		}
 	}()
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	realtimeHub := realtime.NewHub()
+	logging.L().Info("starting realtime websocket listener")
+	if err := realtime.StartListener(ctx, databaseURL, realtimeHub); err != nil {
+		logging.L().Error("failed to start realtime listener", "error", err)
+	} else {
+		logging.L().Info("realtime websocket listener started successfully")
+	}
+
 	// Initialize trusted origins cache from database
 	logging.L().Info("initializing trusted origins cache")
 	if err := middleware.InitTrustedOriginsCache(); err != nil {
@@ -187,12 +201,31 @@ func serveAnalytics(
 		return c.Next()
 	})
 
+	// Realtime WebSocket endpoint
+	app.Use("/ws/realtime", func(c fiber.Ctx) error {
+		if websocket.IsWebSocketUpgrade(c) {
+			return c.Next()
+		}
+		return fiber.ErrUpgradeRequired
+	})
+	app.Get("/ws/realtime", realtimeHub.Handler())
+
 	// CSRF protection middleware - use database-backed trusted origins
 	// Get initial trusted origins from cache
 	trustedOrigins, err := middleware.GetTrustedOrigins()
 	if err != nil {
 		logging.L().Warn("failed to get trusted origins", "error", err)
 		trustedOrigins = []string{} // Empty list if error
+	}
+
+	// Transform domain strings to full URLs for CSRF middleware
+	trustedOriginURLs := make([]string, 0, len(trustedOrigins))
+	for _, domain := range trustedOrigins {
+		if !strings.HasPrefix(domain, "http://") && !strings.HasPrefix(domain, "https://") {
+			trustedOriginURLs = append(trustedOriginURLs, "http://"+domain)
+		} else {
+			trustedOriginURLs = append(trustedOriginURLs, domain)
+		}
 	}
 
 	app.Use(csrf.New(csrf.Config{
@@ -202,8 +235,8 @@ func serveAnalytics(
 		CookieHTTPOnly: false, // Must be false to allow JavaScript to read token
 		CookieSecure:   true,  // Required for SameSite=None
 		IdleTimeout:    7 * 24 * time.Hour,
-		Session:        nil,            // Use cookie-based tokens, not session
-		TrustedOrigins: trustedOrigins, // Loaded from database
+		Session:        nil,               // Use cookie-based tokens, not session
+		TrustedOrigins: trustedOriginURLs, // Loaded from database, transformed to URLs
 		// Skip CSRF protection for tracking endpoint (public API)
 		Next: func(c fiber.Ctx) bool {
 			return c.Path() == "/api/send"

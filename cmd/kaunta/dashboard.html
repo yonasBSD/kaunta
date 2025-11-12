@@ -1127,6 +1127,9 @@
           sortColumn: "views",
           sortDirection: "desc",
           refreshInterval: null,
+          realtimeSocket: null,
+          realtimeReconnectTimer: null,
+          realtimeRefreshTimeout: null,
           chart: null,
           activeTab: "pages",
           breakdownData: [],
@@ -1176,6 +1179,7 @@
               this.refreshInterval = setInterval(() => this.loadStats(), 5000);
               setInterval(() => this.loadTopPages(), 30000);
               setInterval(() => this.loadBreakdown(), 30000);
+              this.connectRealtime();
             }
           },
           async loadChartAndSetupIntervals() {
@@ -1233,7 +1237,86 @@
               await this.loadMapData();
 
               this.refreshInterval = setInterval(() => this.loadStats(), 5000);
+              this.connectRealtime(true);
             }
+          },
+          connectRealtime(forceReconnect = false) {
+            if (
+              typeof WebSocket === "undefined" ||
+              !this.selectedWebsite ||
+              (this.realtimeSocket && !forceReconnect)
+            ) {
+              return;
+            }
+
+            if (this.realtimeSocket) {
+              this.realtimeSocket.close();
+              this.realtimeSocket = null;
+            }
+
+            if (this.realtimeReconnectTimer) {
+              clearTimeout(this.realtimeReconnectTimer);
+              this.realtimeReconnectTimer = null;
+            }
+
+            const protocol =
+              window.location.protocol === "https:" ? "wss" : "ws";
+            const wsUrl = `${protocol}://${window.location.host}/ws/realtime`;
+
+            try {
+              const socket = new WebSocket(wsUrl);
+              this.realtimeSocket = socket;
+
+              socket.onmessage = (event) => {
+                try {
+                  const payload = JSON.parse(event.data);
+                  if (
+                    payload.website_id &&
+                    payload.website_id === this.selectedWebsite
+                  ) {
+                    this.scheduleRealtimeRefresh();
+                  }
+                } catch (error) {
+                  console.warn("Realtime payload parse error:", error);
+                }
+              };
+
+              socket.onclose = () => {
+                this.realtimeSocket = null;
+                this.realtimeReconnectTimer = setTimeout(
+                  () => this.connectRealtime(),
+                  5000
+                );
+              };
+
+              socket.onerror = () => {
+                socket.close();
+              };
+            } catch (error) {
+              console.warn("Realtime connection error:", error);
+              this.realtimeReconnectTimer = setTimeout(
+                () => this.connectRealtime(),
+                5000
+              );
+            }
+          },
+          scheduleRealtimeRefresh() {
+            if (this.realtimeRefreshTimeout) {
+              return;
+            }
+            this.realtimeRefreshTimeout = setTimeout(async () => {
+              await this.loadStats();
+              this.realtimeRefreshTimeout = null;
+            }, 750);
+          },
+          buildFilterParams(prefix = '') {
+            const params = new URLSearchParams();
+            if (this.filters.country) params.set('country', this.filters.country);
+            if (this.filters.browser) params.set('browser', this.filters.browser);
+            if (this.filters.device) params.set('device', this.filters.device);
+            if (this.filters.page) params.set('page', this.filters.page);
+            const queryString = params.toString();
+            return queryString ? prefix + queryString : '';
           },
           async setDateRange(range) {
             this.dateRange = range;
@@ -1251,8 +1334,9 @@
           async loadStats() {
             if (!this.selectedWebsite) return;
             try {
+              const filterParams = this.buildFilterParams('?');
               const response = await fetch(
-                `/api/dashboard/stats/${this.selectedWebsite}`
+                `/api/dashboard/stats/${this.selectedWebsite}${filterParams}`
               );
               if (response.ok) {
                 this.stats = await response.json();
@@ -1264,8 +1348,9 @@
           async loadTopPages() {
             if (!this.selectedWebsite) return;
             try {
+              const filterParams = this.buildFilterParams('&');
               const response = await fetch(
-                `/api/dashboard/pages/${this.selectedWebsite}?limit=10`
+                `/api/dashboard/pages/${this.selectedWebsite}?limit=10${filterParams}`
               );
               if (response.ok) {
                 this.pages = await response.json();
@@ -1281,8 +1366,9 @@
             try {
               const days =
                 this.dateRange === "1" ? 1 : this.dateRange === "7" ? 7 : 30;
+              const filterParams = this.buildFilterParams('&');
               const response = await fetch(
-                `/api/dashboard/timeseries/${this.selectedWebsite}?days=${days}`
+                `/api/dashboard/timeseries/${this.selectedWebsite}?days=${days}${filterParams}`
               );
               if (response.ok) {
                 const data = await response.json();
@@ -1395,8 +1481,9 @@
 
             try {
               const endpoint = this.activeTab;
+              const filterParams = this.buildFilterParams('?');
               const response = await fetch(
-                `/api/dashboard/${endpoint}/${this.selectedWebsite}`
+                `/api/dashboard/${endpoint}/${this.selectedWebsite}${filterParams}`
               );
               if (response.ok) {
                 const data = await response.json();
