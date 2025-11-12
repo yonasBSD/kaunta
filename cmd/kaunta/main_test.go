@@ -16,6 +16,7 @@ func TestRunPassesEmbeddedAssetsToCLI(t *testing.T) {
 	called := false
 	executeCLI = func(
 		version string,
+		gotAssetsFS interface{},
 		gotTracker []byte,
 		gotVendorJS []byte,
 		gotVendorCSS []byte,
@@ -25,6 +26,7 @@ func TestRunPassesEmbeddedAssetsToCLI(t *testing.T) {
 	) error {
 		called = true
 		assert.Equal(t, strings.TrimSpace(versionFile), version)
+		assert.NotNil(t, gotAssetsFS)
 		assert.Equal(t, trackerScript, gotTracker)
 		assert.Equal(t, vendorJS, gotVendorJS)
 		assert.Equal(t, vendorCSS, gotVendorCSS)
@@ -44,6 +46,7 @@ func TestRunPropagatesExecuteError(t *testing.T) {
 
 	executeCLI = func(
 		version string,
+		assetsFS interface{},
 		tracker []byte,
 		vendorJSBytes []byte,
 		vendorCSSBytes []byte,

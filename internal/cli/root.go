@@ -3,8 +3,10 @@ package cli
 import (
 	"context"
 	"crypto/sha256"
+	"embed"
 	"encoding/hex"
 	"fmt"
+	"io/fs"
 	"os"
 	"strings"
 	"time"
@@ -18,6 +20,7 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/limiter"
 	"github.com/gofiber/fiber/v3/middleware/logger"
 	"github.com/gofiber/fiber/v3/middleware/recover"
+	"github.com/gofiber/fiber/v3/middleware/static"
 	"github.com/spf13/cobra"
 
 	"github.com/seuros/kaunta/internal/config"
@@ -67,6 +70,7 @@ It provides real-time analytics and a clean dashboard interface.`,
 		// If no arguments provided, run serve
 		if len(args) == 0 {
 			return serveAnalytics(
+				AssetsFS,
 				TrackerScript,
 				VendorJS,
 				VendorCSS,
@@ -82,6 +86,7 @@ It provides real-time analytics and a clean dashboard interface.`,
 // Execute is called by main
 func Execute(
 	version string,
+	assetsFS interface{},
 	trackerScript,
 	vendorJS,
 	vendorCSS,
@@ -90,6 +95,7 @@ func Execute(
 	indexTemplate []byte,
 ) error {
 	Version = version
+	AssetsFS = assetsFS
 	TrackerScript = trackerScript
 	VendorJS = vendorJS
 	VendorCSS = vendorCSS
@@ -104,6 +110,7 @@ func Execute(
 
 // Embedded assets passed from main
 var (
+	AssetsFS          interface{} // embed.FS
 	TrackerScript     []byte
 	VendorJS          []byte
 	VendorCSS         []byte
@@ -114,6 +121,7 @@ var (
 
 // serveAnalytics runs the Kaunta server
 func serveAnalytics(
+	assetsFS interface{},
 	trackerScript, vendorJS, vendorCSS, countriesGeoJSON, dashboardTemplate, indexTemplate []byte,
 ) error {
 	// Get database URL
@@ -300,6 +308,27 @@ func serveAnalytics(
 	app.Get("/k.js", handleTrackerScript(trackerScript))
 	app.Get("/kaunta.js", handleTrackerScript(trackerScript)) // Long form
 	app.Get("/script.js", handleTrackerScript(trackerScript)) // Umami-compatible alias
+
+	// Static assets (favicon, etc.) from embedded FS
+	assetsSubFS, err := fs.Sub(assetsFS.(embed.FS), "assets")
+	if err != nil {
+		return fmt.Errorf("failed to create sub filesystem: %w", err)
+	}
+	app.Get("/assets/*", static.New("", static.Config{
+		FS:            assetsSubFS,
+		MaxAge:        31536000, // 1 year cache
+		CacheDuration: 365 * 24 * time.Hour,
+	}))
+	// Serve favicon.ico from root
+	app.Get("/favicon.ico", func(c fiber.Ctx) error {
+		data, err := fs.ReadFile(assetsFS.(embed.FS), "assets/favicon.ico")
+		if err != nil {
+			return c.Status(404).SendString("Not found")
+		}
+		c.Set("Content-Type", "image/x-icon")
+		c.Set("Cache-Control", "public, max-age=31536000, immutable")
+		return c.Send(data)
+	})
 
 	// Tracking API (Umami-compatible)
 	app.Options("/api/send", func(c fiber.Ctx) error {

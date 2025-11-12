@@ -1,7 +1,7 @@
 package main
 
 import (
-	_ "embed"
+	"embed"
 	"strings"
 
 	"github.com/seuros/kaunta/internal/cli"
@@ -10,6 +10,9 @@ import (
 
 //go:embed VERSION
 var versionFile string
+
+//go:embed assets
+var assetsFS embed.FS
 
 //go:embed assets/kaunta.min.js
 var trackerScript []byte
@@ -35,6 +38,7 @@ func run() error {
 	version := strings.TrimSpace(versionFile)
 	return executeCLI(
 		version,
+		assetsFS,
 		trackerScript,
 		vendorJS,
 		vendorCSS,
