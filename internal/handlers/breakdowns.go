@@ -15,8 +15,10 @@ func handleBreakdown(c fiber.Ctx, dimension string) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid website ID"})
 	}
 
+	// Parse pagination parameters
+	pagination := ParsePaginationParams(c)
+
 	// Extract query parameters
-	limit := fiber.Query[int](c, "limit", 10)
 	country := c.Query("country")
 	browser := c.Query("browser")
 	device := c.Query("device")
@@ -37,13 +39,14 @@ func handleBreakdown(c fiber.Ctx, dimension string) error {
 		pageParam = page
 	}
 
-	// Call get_breakdown() function with appropriate dimension
-	query := `SELECT * FROM get_breakdown($1, $2, 1, $3, $4, $5, $6, $7)`
+	// Call get_breakdown() function with appropriate dimension and pagination
+	query := `SELECT * FROM get_breakdown($1, $2, 1, $3, $4, $5, $6, $7, $8)`
 	rows, err := database.DB.Query(
 		query,
 		websiteID,
 		dimension,
-		limit,
+		pagination.Per,
+		pagination.Offset,
 		countryParam,
 		browserParam,
 		deviceParam,
@@ -56,15 +59,19 @@ func handleBreakdown(c fiber.Ctx, dimension string) error {
 	defer func() { _ = rows.Close() }()
 
 	items := make([]BreakdownItem, 0)
+	var totalCount int64
 	for rows.Next() {
 		var item BreakdownItem
-		if err := rows.Scan(&item.Name, &item.Count); err != nil {
+		var rowTotal int64
+		if err := rows.Scan(&item.Name, &item.Count, &rowTotal); err != nil {
 			continue
 		}
+		totalCount = rowTotal // Capture total count from function
 		items = append(items, item)
 	}
 
-	return c.JSON(items)
+	// Return paginated response
+	return c.JSON(NewPaginatedResponse(items, pagination, totalCount))
 }
 
 // HandleTopReferrers returns top referrers breakdown

@@ -17,7 +17,8 @@ func HandleTopPages(c fiber.Ctx) error {
 		})
 	}
 
-	limit := fiber.Query[int](c, "limit", 10)
+	// Parse pagination parameters
+	pagination := ParsePaginationParams(c)
 
 	// Extract filter parameters
 	country := c.Query("country")
@@ -36,14 +37,14 @@ func HandleTopPages(c fiber.Ctx) error {
 		deviceParam = device
 	}
 
-	// Call get_top_pages() function
-	// Function returns: (path, views, unique_visitors, avg_engagement_time)
-	// We only need path and views for backward compatibility
-	query := `SELECT * FROM get_top_pages($1, 1, $2, $3, $4, $5)`
+	// Call get_top_pages() function with pagination
+	// Function returns: (path, views, unique_visitors, avg_engagement_time, total_count)
+	query := `SELECT * FROM get_top_pages($1, 1, $2, $3, $4, $5, $6)`
 	rows, err := database.DB.Query(
 		query,
 		websiteID,
-		limit,
+		pagination.Per,
+		pagination.Offset,
 		countryParam,
 		browserParam,
 		deviceParam,
@@ -57,15 +58,19 @@ func HandleTopPages(c fiber.Ctx) error {
 	defer func() { _ = rows.Close() }()
 
 	pages := make([]TopPage, 0)
+	var totalCount int64
 	for rows.Next() {
 		var path string
 		var views int64
 		var uniqueVisitors int64   // Not used in response, but returned by function
 		var avgEngagement *float64 // Not used in response, but returned by function
+		var rowTotal int64
 
-		if err := rows.Scan(&path, &views, &uniqueVisitors, &avgEngagement); err != nil {
+		if err := rows.Scan(&path, &views, &uniqueVisitors, &avgEngagement, &rowTotal); err != nil {
 			continue
 		}
+
+		totalCount = rowTotal // Capture total count from function
 
 		pages = append(pages, TopPage{
 			Path:  path,
@@ -73,5 +78,6 @@ func HandleTopPages(c fiber.Ctx) error {
 		})
 	}
 
-	return c.JSON(pages)
+	// Return paginated response
+	return c.JSON(NewPaginatedResponse(pages, pagination, totalCount))
 }
