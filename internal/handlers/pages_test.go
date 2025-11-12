@@ -18,12 +18,11 @@ func TestHandleTopPages_Success(t *testing.T) {
 	websiteID := uuid.New()
 	responses := []mockResponse{
 		{
-			match:   "SELECT e.url_path, COUNT(*) as views",
-			args:    []interface{}{websiteID, 10},
-			columns: []string{"url_path", "views"},
+			match:   "SELECT * FROM get_top_pages(",
+			columns: []string{"path", "views", "unique_visitors", "avg_engagement_time", "total_count"},
 			rows: [][]interface{}{
-				{"/", 42},
-				{"/docs", 21},
+				{"/", int64(42), int64(30), 45.2, int64(2)},
+				{"/docs", int64(21), int64(15), 32.5, int64(2)},
 			},
 		},
 	}
@@ -42,11 +41,18 @@ func TestHandleTopPages_Success(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode, string(bodyBytes))
 
+	var paginatedResp PaginatedResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&paginatedResp))
+
+	pagesJSON, err := json.Marshal(paginatedResp.Data)
+	require.NoError(t, err)
 	var pages []TopPage
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&pages))
+	require.NoError(t, json.Unmarshal(pagesJSON, &pages))
+
 	assert.Len(t, pages, 2)
 	assert.Equal(t, "/", pages[0].Path)
 	assert.Equal(t, 42, pages[0].Views)
+	assert.Equal(t, int64(2), paginatedResp.Pagination.Total)
 
 	require.NoError(t, queue.expectationsMet())
 }
@@ -55,11 +61,10 @@ func TestHandleTopPages_WithFilters(t *testing.T) {
 	websiteID := uuid.New()
 	responses := []mockResponse{
 		{
-			match:   "SELECT e.url_path, COUNT(*) as views",
-			args:    []interface{}{websiteID, "US", "Chrome", "mobile", "/docs", 5},
-			columns: []string{"url_path", "views"},
+			match:   "SELECT * FROM get_top_pages(",
+			columns: []string{"path", "views", "unique_visitors", "avg_engagement_time", "total_count"},
 			rows: [][]interface{}{
-				{"/docs", 12},
+				{"/docs", int64(12), int64(10), 40.0, int64(1)},
 			},
 		},
 	}
@@ -67,15 +72,22 @@ func TestHandleTopPages_WithFilters(t *testing.T) {
 	app, queue, cleanup := setupFiberTest(t, "/api/dashboard/pages/:website_id", HandleTopPages, responses)
 	defer cleanup()
 
-	url := "/api/dashboard/pages/" + websiteID.String() + "?limit=5&country=US&browser=Chrome&device=mobile&page=/docs"
+	url := "/api/dashboard/pages/" + websiteID.String() + "?per=5&country=US&browser=Chrome&device=mobile&page=/docs"
 	req := httptest.NewRequest(http.MethodGet, url, nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var paginatedResp PaginatedResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&paginatedResp))
+
+	pagesJSON, err := json.Marshal(paginatedResp.Data)
+	require.NoError(t, err)
 	var pages []TopPage
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&pages))
+	require.NoError(t, json.Unmarshal(pagesJSON, &pages))
+
 	assert.Len(t, pages, 1)
 	assert.Equal(t, "/docs", pages[0].Path)
 	require.NoError(t, queue.expectationsMet())
@@ -97,8 +109,7 @@ func TestHandleTopPages_QueryError(t *testing.T) {
 	websiteID := uuid.New()
 	responses := []mockResponse{
 		{
-			match: "SELECT e.url_path, COUNT(*) as views",
-			args:  []interface{}{websiteID, 10},
+			match: "SELECT * FROM get_top_pages(",
 			err:   assert.AnError,
 		},
 	}

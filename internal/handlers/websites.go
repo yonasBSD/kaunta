@@ -5,13 +5,22 @@ import (
 	"github.com/seuros/kaunta/internal/database"
 )
 
-// HandleWebsites returns list of all websites
+// HandleWebsites returns list of all websites with pagination
 func HandleWebsites(c fiber.Ctx) error {
+	// Parse pagination parameters
+	pagination := ParsePaginationParams(c)
+
+	// Query with COUNT and pagination
 	rows, err := database.DB.Query(`
-		SELECT website_id, domain, name
-		FROM website
-		ORDER BY name, domain
-	`)
+		WITH total AS (
+			SELECT COUNT(*)::BIGINT as count FROM website
+		)
+		SELECT w.website_id, w.domain, w.name, t.count as total_count
+		FROM website w
+		CROSS JOIN total t
+		ORDER BY w.name, w.domain
+		LIMIT $1 OFFSET $2
+	`, pagination.Per, pagination.Offset)
 
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
@@ -21,12 +30,15 @@ func HandleWebsites(c fiber.Ctx) error {
 	defer func() { _ = rows.Close() }()
 
 	var websites []Website
+	var totalCount int64
 	for rows.Next() {
 		var website Website
 		var name *string
-		if err := rows.Scan(&website.ID, &website.Domain, &name); err != nil {
+		var rowTotal int64
+		if err := rows.Scan(&website.ID, &website.Domain, &name, &rowTotal); err != nil {
 			continue
 		}
+		totalCount = rowTotal // Capture total count
 		if name != nil {
 			website.Name = *name
 		} else {
@@ -35,5 +47,6 @@ func HandleWebsites(c fiber.Ctx) error {
 		websites = append(websites, website)
 	}
 
-	return c.JSON(websites)
+	// Return paginated response
+	return c.JSON(NewPaginatedResponse(websites, pagination, totalCount))
 }

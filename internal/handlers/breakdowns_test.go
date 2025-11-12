@@ -16,10 +16,9 @@ func TestHandleTopReferrers_Success(t *testing.T) {
 	websiteID := uuid.New()
 	responses := []mockResponse{
 		{
-			match:   "SELECT COALESCE(e.referrer_domain, 'Direct / None') as name",
-			args:    []interface{}{websiteID, 10},
-			columns: []string{"name", "count"},
-			rows:    [][]interface{}{{"example.com", 12}},
+			match:   "SELECT * FROM get_breakdown(",
+			columns: []string{"name", "count", "total_count"},
+			rows:    [][]interface{}{{"example.com", int64(12), int64(1)}},
 		},
 	}
 
@@ -32,10 +31,18 @@ func TestHandleTopReferrers_Success(t *testing.T) {
 	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var paginatedResp PaginatedResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&paginatedResp))
+
+	itemsJSON, err := json.Marshal(paginatedResp.Data)
+	require.NoError(t, err)
 	var items []BreakdownItem
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&items))
+	require.NoError(t, json.Unmarshal(itemsJSON, &items))
+
 	assert.Len(t, items, 1)
 	assert.Equal(t, "example.com", items[0].Name)
+	assert.Equal(t, int64(1), paginatedResp.Pagination.Total)
 
 	require.NoError(t, queue.expectationsMet())
 }
@@ -44,17 +51,16 @@ func TestHandleTopReferrers_Filtered(t *testing.T) {
 	websiteID := uuid.New()
 	responses := []mockResponse{
 		{
-			match:   "SELECT COALESCE(e.referrer_domain, 'Direct / None') as name",
-			args:    []interface{}{websiteID, "US", "Chrome", "mobile", 5},
-			columns: []string{"name", "count"},
-			rows:    [][]interface{}{{"example.com", 5}},
+			match:   "SELECT * FROM get_breakdown(",
+			columns: []string{"name", "count", "total_count"},
+			rows:    [][]interface{}{{"example.com", int64(5), int64(1)}},
 		},
 	}
 
 	app, queue, cleanup := setupFiberTest(t, "/api/dashboard/referrers/:website_id", HandleTopReferrers, responses)
 	defer cleanup()
 
-	url := "/api/dashboard/referrers/" + websiteID.String() + "?limit=5&country=US&browser=Chrome&device=mobile"
+	url := "/api/dashboard/referrers/" + websiteID.String() + "?per=5&country=US&browser=Chrome&device=mobile"
 	req := httptest.NewRequest(http.MethodGet, url, nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
@@ -68,10 +74,9 @@ func TestHandleTopBrowsers_Success(t *testing.T) {
 	websiteID := uuid.New()
 	responses := []mockResponse{
 		{
-			match:   "SELECT COALESCE(s.browser, 'Unknown') as name",
-			args:    []interface{}{websiteID, 10},
-			columns: []string{"name", "count"},
-			rows:    [][]interface{}{{"Chrome", 20}},
+			match:   "SELECT * FROM get_breakdown(",
+			columns: []string{"name", "count", "total_count"},
+			rows:    [][]interface{}{{"Chrome", int64(20), int64(1)}},
 		},
 	}
 
@@ -91,10 +96,9 @@ func TestHandleTopDevices_Success(t *testing.T) {
 	websiteID := uuid.New()
 	responses := []mockResponse{
 		{
-			match:   "SELECT COALESCE(s.device, 'Unknown') as name",
-			args:    []interface{}{websiteID, 10},
-			columns: []string{"name", "count"},
-			rows:    [][]interface{}{{"mobile", 8}},
+			match:   "SELECT * FROM get_breakdown(",
+			columns: []string{"name", "count", "total_count"},
+			rows:    [][]interface{}{{"mobile", int64(8), int64(1)}},
 		},
 	}
 
@@ -114,10 +118,9 @@ func TestHandleTopCountries_Success(t *testing.T) {
 	websiteID := uuid.New()
 	responses := []mockResponse{
 		{
-			match:   "SELECT COALESCE(s.country, 'Unknown') as name",
-			args:    []interface{}{websiteID, 10},
-			columns: []string{"name", "count"},
-			rows:    [][]interface{}{{"United States", 15}},
+			match:   "SELECT * FROM get_breakdown(",
+			columns: []string{"name", "count", "total_count"},
+			rows:    [][]interface{}{{"United States", int64(15), int64(1)}},
 		},
 	}
 
