@@ -21,6 +21,17 @@ A simple, fast, privacy-focused web analytics engine. Drop-in replacement for Um
 - **Full Analytics** - Visitors, pageviews, referrers, devices, locations, real-time stats
 - **Geolocation** - City/region level with automatic MaxMind GeoLite2 download
 - **Multi-Domain Support** - Custom domains via CNAME with shared authentication
+- **Cross-Platform** - Linux, macOS, Windows, and FreeBSD binaries available
+
+## Supported Platforms
+
+Pre-built binaries are available for:
+- **Linux** (amd64, arm64)
+- **macOS** (amd64, arm64)
+- **Windows** (amd64, arm64)
+- **FreeBSD** (amd64)
+
+Download the latest release from [GitHub Releases](https://github.com/seuros/kaunta/releases). The `--self-upgrade` command works on all platforms to update to the latest version.
 
 ## Installation
 

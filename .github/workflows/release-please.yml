@@ -94,21 +94,41 @@ jobs:
           - goos: windows
             goarch: arm64
             ext: ".exe"
+          - goos: freebsd
+            goarch: amd64
+            ext: ""
     steps:
       - uses: actions/checkout@v5
         with:
           ref: v${{ needs.release-please.outputs.version }}
 
       - name: Set up Bun
+        if: matrix.goos != 'freebsd'
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
-      - name: Install frontend deps
+      - name: Set up Deno (for FreeBSD builds)
+        if: matrix.goos == 'freebsd'
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Install frontend deps (Bun)
+        if: matrix.goos != 'freebsd'
         run: bun install --frozen-lockfile
 
-      - name: Build embedded assets
+      - name: Build embedded assets (Bun)
+        if: matrix.goos != 'freebsd'
         run: bun run build
+
+      - name: Install frontend deps (Deno)
+        if: matrix.goos == 'freebsd'
+        run: deno install
+
+      - name: Build embedded assets (Deno)
+        if: matrix.goos == 'freebsd'
+        run: deno run -A build.ts
 
       - uses: actions/setup-go@v6
         with:

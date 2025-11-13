@@ -40,9 +40,16 @@ coverage: ## Generate test coverage report
 
 build: ## Build the kaunta binary
 	@echo "$(BLUE)Building Kaunta...$(NC)"
-	@bun install --frozen-lockfile
-	@bun run build
-	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -ldflags="-w -s" -o kaunta ./cmd/kaunta
+	@if command -v bun >/dev/null 2>&1; then \
+		echo "$(BLUE)Using Bun for frontend build...$(NC)"; \
+		bun install --frozen-lockfile && bun run build; \
+	elif command -v deno >/dev/null 2>&1; then \
+		echo "$(BLUE)Using Deno for frontend build...$(NC)"; \
+		deno run -A build.ts; \
+	else \
+		echo "$(YELLOW)Warning: Neither Bun nor Deno found, skipping frontend build$(NC)"; \
+	fi
+	@CGO_ENABLED=0 go build -v -ldflags="-w -s" -o kaunta ./cmd/kaunta
 	@echo "$(GREEN)Build complete: ./kaunta$(NC)"
 
 run: build ## Run the application
