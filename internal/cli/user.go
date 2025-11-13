@@ -256,12 +256,16 @@ Example:
 }
 
 var userResetPasswordCmd = &cobra.Command{
-	Use:   "reset-password <username>",
+	Use:   "reset-password <username> [--password <password>]",
 	Short: "Reset user password",
 	Long: `Reset password for a user.
 
-Example:
-  kaunta user reset-password admin`,
+In interactive mode, you will be prompted to enter a new password.
+In non-interactive mode (e.g., Docker), use the --password flag.
+
+Examples:
+  kaunta user reset-password admin
+  kaunta user reset-password admin --password newpassword123`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		username := args[0]
@@ -282,19 +286,24 @@ Example:
 			return fmt.Errorf("user '%s' not found", username)
 		}
 
-		// Get new password
-		password, err := readPassword("New password: ")
-		if err != nil {
-			return err
-		}
+		// Get password from flag or prompt
+		password, _ := cmd.Flags().GetString("password")
 
-		confirmPassword, err := readPassword("Confirm password: ")
-		if err != nil {
-			return err
-		}
+		if password == "" {
+			// Interactive mode: prompt for password
+			password, err = readPassword("New password: ")
+			if err != nil {
+				return err
+			}
 
-		if password != confirmPassword {
-			return fmt.Errorf("passwords do not match")
+			confirmPassword, err := readPassword("Confirm password: ")
+			if err != nil {
+				return err
+			}
+
+			if password != confirmPassword {
+				return fmt.Errorf("passwords do not match")
+			}
 		}
 
 		if len(password) < 8 {
@@ -355,6 +364,7 @@ func init() {
 	userCreateCmd.Flags().StringP("name", "n", "", "User's full name")
 	userCreateCmd.Flags().StringP("password", "p", "", "User password (if not provided, will be auto-generated in non-interactive mode)")
 	userDeleteCmd.Flags().BoolP("force", "f", false, "Skip confirmation prompt")
+	userResetPasswordCmd.Flags().StringP("password", "p", "", "New password (if not provided, will prompt interactively)")
 
 	// Add subcommands
 	userCmd.AddCommand(userCreateCmd)
