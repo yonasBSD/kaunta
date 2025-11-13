@@ -3,15 +3,17 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/viper"
 )
 
 // Config holds application configuration
 type Config struct {
-	DatabaseURL string
-	Port        string
-	DataDir     string
+	DatabaseURL    string
+	Port           string
+	DataDir        string
+	TrustedOrigins []string
 }
 
 // Load loads configuration from multiple sources with priority:
@@ -37,6 +39,7 @@ func Load() (*Config, error) {
 	// Set default values
 	v.SetDefault("port", "3000")
 	v.SetDefault("data_dir", "./data")
+	v.SetDefault("trusted_origins", "localhost")
 
 	// Bind environment variables
 	v.SetEnvPrefix("") // No prefix, allow DATABASE_URL directly
@@ -46,14 +49,20 @@ func Load() (*Config, error) {
 	_ = v.BindEnv("database_url", "DATABASE_URL")
 	_ = v.BindEnv("port", "PORT")
 	_ = v.BindEnv("data_dir", "DATA_DIR")
+	_ = v.BindEnv("trusted_origins", "TRUSTED_ORIGINS")
 
 	// Read config file if it exists (don't error if not found)
 	_ = v.ReadInConfig()
 
+	// Parse comma-separated trusted origins
+	originsStr := v.GetString("trusted_origins")
+	origins := parseTrustedOrigins(originsStr)
+
 	return &Config{
-		DatabaseURL: v.GetString("database_url"),
-		Port:        v.GetString("port"),
-		DataDir:     v.GetString("data_dir"),
+		DatabaseURL:    v.GetString("database_url"),
+		Port:           v.GetString("port"),
+		DataDir:        v.GetString("data_dir"),
+		TrustedOrigins: origins,
 	}, nil
 }
 
@@ -74,6 +83,7 @@ func LoadWithOverrides(databaseURL, port, dataDir string) (*Config, error) {
 	// Set default values
 	v.SetDefault("port", "3000")
 	v.SetDefault("data_dir", "./data")
+	v.SetDefault("trusted_origins", "localhost")
 
 	// Bind environment variables
 	v.SetEnvPrefix("")
@@ -81,6 +91,7 @@ func LoadWithOverrides(databaseURL, port, dataDir string) (*Config, error) {
 	_ = v.BindEnv("database_url", "DATABASE_URL")
 	_ = v.BindEnv("port", "PORT")
 	_ = v.BindEnv("data_dir", "DATA_DIR")
+	_ = v.BindEnv("trusted_origins", "TRUSTED_ORIGINS")
 
 	// Read config file
 	_ = v.ReadInConfig()
@@ -96,9 +107,39 @@ func LoadWithOverrides(databaseURL, port, dataDir string) (*Config, error) {
 		v.Set("data_dir", dataDir)
 	}
 
+	// Parse comma-separated trusted origins
+	originsStr := v.GetString("trusted_origins")
+	origins := parseTrustedOrigins(originsStr)
+
 	return &Config{
-		DatabaseURL: v.GetString("database_url"),
-		Port:        v.GetString("port"),
-		DataDir:     v.GetString("data_dir"),
+		DatabaseURL:    v.GetString("database_url"),
+		Port:           v.GetString("port"),
+		DataDir:        v.GetString("data_dir"),
+		TrustedOrigins: origins,
 	}, nil
+}
+
+// parseTrustedOrigins parses a comma-separated string into a slice of trimmed, lowercased origins
+func parseTrustedOrigins(originsStr string) []string {
+	if originsStr == "" {
+		return []string{}
+	}
+
+	parts := strings.Split(originsStr, ",")
+	origins := make([]string, 0, len(parts))
+
+	for _, part := range parts {
+		origin := strings.TrimSpace(part)
+		origin = strings.ToLower(origin)
+		// Strip protocol if provided
+		origin = strings.TrimPrefix(origin, "http://")
+		origin = strings.TrimPrefix(origin, "https://")
+		origin = strings.TrimSuffix(origin, "/")
+
+		if origin != "" {
+			origins = append(origins, origin)
+		}
+	}
+
+	return origins
 }

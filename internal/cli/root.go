@@ -159,6 +159,14 @@ func serveAnalytics(
 		logging.L().Info("realtime websocket listener started successfully")
 	}
 
+	// Sync trusted origins from config to database
+	cfg, err := config.Load()
+	if err != nil {
+		logging.L().Warn("failed to load config for trusted origins", "error", err)
+	} else if len(cfg.TrustedOrigins) > 0 {
+		syncTrustedOrigins(cfg.TrustedOrigins)
+	}
+
 	// Initialize trusted origins cache from database
 	logging.L().Info("initializing trusted origins cache")
 	if err := middleware.InitTrustedOriginsCache(); err != nil {
@@ -783,6 +791,28 @@ func loginPageHTML() string {
     </script>
   </body>
 </html>`
+}
+
+// syncTrustedOrigins syncs trusted origins from config to database
+func syncTrustedOrigins(origins []string) {
+	logging.L().Info("syncing trusted origins from config", "count", len(origins))
+	for _, origin := range origins {
+		// Insert or update trusted origin (upsert)
+		query := `
+			INSERT INTO trusted_origin (domain, is_active, description)
+			VALUES ($1, true, 'Auto-synced from TRUSTED_ORIGINS env var')
+			ON CONFLICT (domain) DO UPDATE SET
+				is_active = true,
+				updated_at = NOW()
+		`
+		_, err := database.DB.Exec(query, origin)
+		if err != nil {
+			logging.L().Warn("failed to sync trusted origin", "origin", origin, "error", err)
+		} else {
+			logging.L().Info("synced trusted origin", "origin", origin)
+		}
+	}
+	logging.L().Info("finished syncing trusted origins")
 }
 
 func init() {
