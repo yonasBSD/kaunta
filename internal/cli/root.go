@@ -245,12 +245,20 @@ func serveAnalytics(
 		}
 	}
 
+	// Determine if we should use secure cookies (HTTPS required)
+	// Check for SECURE_COOKIES env var, default to false for localhost
+	secureEnabled := os.Getenv("SECURE_COOKIES") == "true"
+	sameSiteMode := "Lax"
+	if secureEnabled {
+		sameSiteMode = "None" // SameSite=None requires Secure flag
+	}
+
 	app.Use(csrf.New(csrf.Config{
 		Extractor:      extractors.FromHeader("X-CSRF-Token"),
 		CookieName:     "kaunta_csrf",
-		CookieSameSite: "None",
-		CookieHTTPOnly: false, // Must be false to allow JavaScript to read token
-		CookieSecure:   true,  // Required for SameSite=None
+		CookieSameSite: sameSiteMode,
+		CookieHTTPOnly: false,         // Must be false to allow JavaScript to read token
+		CookieSecure:   secureEnabled, // Only enable for HTTPS deployments
 		IdleTimeout:    7 * 24 * time.Hour,
 		Session:        nil,               // Use cookie-based tokens, not session
 		TrustedOrigins: trustedOriginURLs, // Loaded from database, transformed to URLs

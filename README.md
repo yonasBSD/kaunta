@@ -55,6 +55,7 @@ data_dir = "./data"
 export DATABASE_URL="postgresql://user:password@localhost:5432/kaunta"
 export PORT="3000"
 export DATA_DIR="./data"
+export SECURE_COOKIES="true"  # Enable for HTTPS deployments (default: false)
 ```
 
 **Option 3: Command flags**
