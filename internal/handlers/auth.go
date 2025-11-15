@@ -9,9 +9,11 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/csrf"
 	"github.com/google/uuid"
 
 	"github.com/seuros/kaunta/internal/database"
+	"github.com/seuros/kaunta/internal/logging"
 	"github.com/seuros/kaunta/internal/middleware"
 )
 
@@ -149,6 +151,15 @@ func HandleLogout(c fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"error": "Not authenticated",
 		})
+	}
+
+	// Delete CSRF token (GoFiber v3 best practice)
+	handler := csrf.HandlerFromContext(c)
+	if handler != nil {
+		if err := handler.DeleteToken(c); err != nil {
+			// Log but don't fail logout
+			logging.L().Warn("failed to delete CSRF token", "error", err)
+		}
 	}
 
 	// Delete session from database

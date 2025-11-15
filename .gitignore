@@ -53,3 +53,4 @@ cmd/kaunta/assets/kaunta.min.js
 test-results/
 playwright-report/
 playwright/.cache/
+log/
