@@ -10,8 +10,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/healthcheck"
+	"github.com/seuros/kaunta/internal/config"
+	"github.com/seuros/kaunta/internal/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -152,4 +155,42 @@ func TestLoginPageHTMLReadsCSRFFromCookie(t *testing.T) {
 	// Should NOT fetch token from API
 	assert.NotContains(t, html, "fetch('/api/auth/csrf')")
 	assert.NotContains(t, html, "fetchCSRFToken()")
+}
+
+func TestSecureCookiesEnabledUsesConfigWhenPresent(t *testing.T) {
+	cfg := &config.Config{SecureCookies: true}
+	assert.True(t, secureCookiesEnabled(cfg))
+
+	cfg.SecureCookies = false
+	assert.False(t, secureCookiesEnabled(cfg))
+}
+
+func TestSecureCookiesEnabledFallsBackToEnv(t *testing.T) {
+	t.Setenv("SECURE_COOKIES", "true")
+	assert.True(t, secureCookiesEnabled(nil))
+
+	t.Setenv("SECURE_COOKIES", "false")
+	assert.False(t, secureCookiesEnabled(nil))
+}
+
+func TestSyncTrustedOriginsUpsertsDomains(t *testing.T) {
+	mockDB, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = mockDB.Close() })
+
+	origDB := database.DB
+	database.DB = mockDB
+	t.Cleanup(func() { database.DB = origDB })
+
+	domains := []string{"example.com", "app.test"}
+
+	for _, domain := range domains {
+		mock.ExpectExec("INSERT INTO trusted_origin").
+			WithArgs(domain).
+			WillReturnResult(sqlmock.NewResult(0, 1))
+	}
+
+	syncTrustedOrigins(domains)
+
+	require.NoError(t, mock.ExpectationsWereMet())
 }

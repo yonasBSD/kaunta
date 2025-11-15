@@ -13,6 +13,7 @@ type Config struct {
 	DatabaseURL    string
 	Port           string
 	DataDir        string
+	SecureCookies  bool
 	TrustedOrigins []string
 }
 
@@ -21,102 +22,89 @@ type Config struct {
 // 2. Config file (~/.kaunta/config.toml or ./kaunta.toml)
 // 3. Environment variables
 func Load() (*Config, error) {
-	v := viper.New()
-
-	// Set config file name and type
-	v.SetConfigName("kaunta")
-	v.SetConfigType("toml")
-
-	// Add config search paths
-	// 1. Current directory
-	v.AddConfigPath(".")
-
-	// 2. User home directory (~/.kaunta/)
-	if home, err := os.UserHomeDir(); err == nil {
-		v.AddConfigPath(filepath.Join(home, ".kaunta"))
-	}
-
-	// Set default values
-	v.SetDefault("port", "3000")
-	v.SetDefault("data_dir", "./data")
-	v.SetDefault("trusted_origins", "localhost")
-
-	// Bind environment variables
-	v.SetEnvPrefix("") // No prefix, allow DATABASE_URL directly
-	v.AutomaticEnv()
-
-	// Map environment variable names to config keys
-	_ = v.BindEnv("database_url", "DATABASE_URL")
-	_ = v.BindEnv("port", "PORT")
-	_ = v.BindEnv("data_dir", "DATA_DIR")
-	_ = v.BindEnv("trusted_origins", "TRUSTED_ORIGINS")
-
-	// Read config file if it exists (don't error if not found)
+	v := newBaseViper()
 	_ = v.ReadInConfig()
-
-	// Parse comma-separated trusted origins
-	originsStr := v.GetString("trusted_origins")
-	origins := parseTrustedOrigins(originsStr)
-
-	return &Config{
-		DatabaseURL:    v.GetString("database_url"),
-		Port:           v.GetString("port"),
-		DataDir:        v.GetString("data_dir"),
-		TrustedOrigins: origins,
-	}, nil
+	return buildConfig(v, "", "", ""), nil
 }
 
 // LoadWithOverrides loads config and applies flag overrides
 func LoadWithOverrides(databaseURL, port, dataDir string) (*Config, error) {
-	v := viper.New()
+	v := newBaseViper()
+	_ = v.ReadInConfig()
+	return buildConfig(v, databaseURL, port, dataDir), nil
+}
 
-	// Set config file name and type
+func newBaseViper() *viper.Viper {
+	v := viper.New()
 	v.SetConfigName("kaunta")
 	v.SetConfigType("toml")
-
-	// Add config search paths
 	v.AddConfigPath(".")
 	if home, err := os.UserHomeDir(); err == nil {
 		v.AddConfigPath(filepath.Join(home, ".kaunta"))
 	}
+	return v
+}
 
-	// Set default values
-	v.SetDefault("port", "3000")
-	v.SetDefault("data_dir", "./data")
-	v.SetDefault("trusted_origins", "localhost")
-
-	// Bind environment variables
-	v.SetEnvPrefix("")
-	v.AutomaticEnv()
-	_ = v.BindEnv("database_url", "DATABASE_URL")
-	_ = v.BindEnv("port", "PORT")
-	_ = v.BindEnv("data_dir", "DATA_DIR")
-	_ = v.BindEnv("trusted_origins", "TRUSTED_ORIGINS")
-
-	// Read config file
-	_ = v.ReadInConfig()
-
-	// Apply flag overrides (highest priority)
-	if databaseURL != "" {
-		v.Set("database_url", databaseURL)
-	}
-	if port != "" {
-		v.Set("port", port)
-	}
-	if dataDir != "" {
-		v.Set("data_dir", dataDir)
+func buildConfig(v *viper.Viper, overrideDatabaseURL, overridePort, overrideDataDir string) *Config {
+	cfg := &Config{
+		Port:           "3000",
+		DataDir:        "./data",
+		SecureCookies:  false,
+		TrustedOrigins: []string{"localhost"},
 	}
 
-	// Parse comma-separated trusted origins
-	originsStr := v.GetString("trusted_origins")
-	origins := parseTrustedOrigins(originsStr)
+	// Apply config file values
+	if v.IsSet("database_url") {
+		cfg.DatabaseURL = v.GetString("database_url")
+	}
+	if v.IsSet("port") {
+		cfg.Port = v.GetString("port")
+	}
+	if v.IsSet("data_dir") {
+		cfg.DataDir = v.GetString("data_dir")
+	}
+	if v.IsSet("trusted_origins") {
+		cfg.TrustedOrigins = parseTrustedOrigins(v.GetString("trusted_origins"))
+	}
+	if v.IsSet("secure_cookies") {
+		cfg.SecureCookies = v.GetBool("secure_cookies")
+	}
 
-	return &Config{
-		DatabaseURL:    v.GetString("database_url"),
-		Port:           v.GetString("port"),
-		DataDir:        v.GetString("data_dir"),
-		TrustedOrigins: origins,
-	}, nil
+	// Environment fallback (only if not configured)
+	if cfg.DatabaseURL == "" {
+		cfg.DatabaseURL = os.Getenv("DATABASE_URL")
+	}
+	if !v.IsSet("port") {
+		if envPort := os.Getenv("PORT"); envPort != "" {
+			cfg.Port = envPort
+		}
+	}
+	if !v.IsSet("data_dir") {
+		if envDataDir := os.Getenv("DATA_DIR"); envDataDir != "" {
+			cfg.DataDir = envDataDir
+		}
+	}
+	if !v.IsSet("trusted_origins") {
+		if envOrigins := os.Getenv("TRUSTED_ORIGINS"); envOrigins != "" {
+			cfg.TrustedOrigins = parseTrustedOrigins(envOrigins)
+		}
+	}
+	if !v.IsSet("secure_cookies") {
+		cfg.SecureCookies = os.Getenv("SECURE_COOKIES") == "true"
+	}
+
+	// Apply overrides (flags) last
+	if overrideDatabaseURL != "" {
+		cfg.DatabaseURL = overrideDatabaseURL
+	}
+	if overridePort != "" {
+		cfg.Port = overridePort
+	}
+	if overrideDataDir != "" {
+		cfg.DataDir = overrideDataDir
+	}
+
+	return cfg
 }
 
 // parseTrustedOrigins parses a comma-separated string into a slice of trimmed, lowercased origins

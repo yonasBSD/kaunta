@@ -47,6 +47,7 @@ Create `kaunta.toml` in current directory or `~/.kaunta/kaunta.toml`:
 database_url = "postgresql://user:password@localhost:5432/kaunta"
 port = "3000"
 data_dir = "./data"
+secure_cookies = false  # Set to true when serving Kaunta behind HTTPS
 ```
 
 **Option 2: Environment variables**
@@ -82,6 +83,14 @@ The server will:
 - Start on port 3000 (configurable with `PORT` env var)
 
 Health check endpoint: `GET /up`
+
+**HTTPS / TLS Termination**
+
+Kaunta only listens for plain HTTP traffic (no built-in TLS). For HTTPS you should:
+- Put Kaunta behind a reverse proxy that handles TLS (nginx, Cloudflare, Caddy, etc.)
+- Terminate HTTPS at the proxy and forward requests to Kaunta over HTTP
+- Set `secure_cookies = true` in `kaunta.toml` (or `SECURE_COOKIES=true`) when your proxy serves HTTPS so CSRF/session cookies are marked `Secure`
+- See `docs/examples/nginx.md` for a sample nginx config and `docs/examples/systemd.md` to run Kaunta as a systemd service
 
 ### 3. Add Tracker Script
 

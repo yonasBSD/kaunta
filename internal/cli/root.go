@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -64,6 +65,7 @@ It provides real-time analytics and a clean dashboard interface.`,
 		if cfg.DataDir != "" {
 			_ = os.Setenv("DATA_DIR", cfg.DataDir)
 		}
+		_ = os.Setenv("SECURE_COOKIES", strconv.FormatBool(cfg.SecureCookies))
 		return nil
 	},
 	// Default to serve command if no subcommand provided
@@ -246,8 +248,7 @@ func serveAnalytics(
 	}
 
 	// Determine if we should use secure cookies (HTTPS required)
-	// Check for SECURE_COOKIES env var, default to false for localhost
-	secureEnabled := os.Getenv("SECURE_COOKIES") == "true"
+	secureEnabled := secureCookiesEnabled(cfg)
 	sameSiteMode := "Lax"
 	if secureEnabled {
 		sameSiteMode = "None" // SameSite=None requires Secure flag
@@ -478,6 +479,13 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+func secureCookiesEnabled(cfg *config.Config) bool {
+	if cfg != nil {
+		return cfg.SecureCookies
+	}
+	return os.Getenv("SECURE_COOKIES") == "true"
 }
 
 // loginPageHTML returns a simple login page with injected CSRF token
