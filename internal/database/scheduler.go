@@ -7,6 +7,12 @@ import (
 	"github.com/seuros/kaunta/internal/logging"
 )
 
+var (
+	nowFunc             = time.Now
+	partitionDaysAhead  = 30
+	retentionPeriodDays = 90
+)
+
 // PartitionScheduler manages automatic partition creation and cleanup
 type PartitionScheduler struct {
 	databaseURL string
@@ -59,8 +65,8 @@ func (ps *PartitionScheduler) schedulePartitionCreation() {
 func (ps *PartitionScheduler) createFuturePartitions() {
 	logging.L().Info("creating future partitions")
 
-	for i := 1; i <= 30; i++ {
-		date := time.Now().AddDate(0, 0, i)
+	for i := 1; i <= partitionDaysAhead; i++ {
+		date := nowFunc().AddDate(0, 0, i)
 		partitionName := fmt.Sprintf("website_event_%s", date.Format("2006_01_02"))
 		startDate := date.Format("2006-01-02")
 		endDate := date.AddDate(0, 0, 1).Format("2006-01-02")
@@ -98,8 +104,7 @@ func (ps *PartitionScheduler) schedulePartitionCleanup() {
 
 // cleanupOldPartitions drops partitions older than retention period
 func (ps *PartitionScheduler) cleanupOldPartitions() {
-	retentionDays := 90 // Keep 90 days of data
-	cutoffDate := time.Now().AddDate(0, 0, -retentionDays)
+	cutoffDate := nowFunc().AddDate(0, 0, -retentionPeriodDays)
 
 	logging.L().Info("cleaning up old partitions", "cutoff", cutoffDate.Format("2006-01-02"))
 

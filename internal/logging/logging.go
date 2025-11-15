@@ -10,6 +10,7 @@ import (
 var (
 	initOnce sync.Once
 	logger   *slog.Logger
+	exitFunc = os.Exit
 )
 
 // L returns the shared application logger, initializing it on first use.
@@ -57,5 +58,5 @@ func With(args ...any) *slog.Logger {
 // Fatal logs the message at error level and exits with status 1.
 func Fatal(msg string, args ...any) {
 	L().Error(msg, args...)
-	os.Exit(1)
+	exitFunc(1)
 }

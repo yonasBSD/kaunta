@@ -3,7 +3,9 @@ module github.com/seuros/kaunta
 go 1.25.0
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/blang/semver v3.5.1+incompatible
+	github.com/gofiber/contrib/v3/websocket v1.0.0-rc.1
 	github.com/gofiber/fiber/v3 v3.0.0-rc.2
 	github.com/golang-migrate/migrate/v4 v4.19.0
 	github.com/google/uuid v1.6.0
@@ -30,7 +32,6 @@ require (
 	github.com/fasthttp/websocket v1.5.12 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
-	github.com/gofiber/contrib/v3/websocket v1.0.0-rc.1 // indirect
 	github.com/gofiber/schema v1.6.0 // indirect
 	github.com/gofiber/utils/v2 v2.0.0-rc.1 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect

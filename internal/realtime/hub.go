@@ -16,10 +16,33 @@ type Hub struct {
 	clients    map[*Client]struct{}
 }
 
+type wsConn interface {
+	ReadMessage() (int, []byte, error)
+	WriteMessage(int, []byte) error
+	Close() error
+}
+
 type Client struct {
 	hub  *Hub
-	conn *websocket.Conn
+	conn wsConn
 	send chan []byte
+}
+
+type pingTicker interface {
+	C() <-chan time.Time
+	Stop()
+}
+
+type realPingTicker struct {
+	*time.Ticker
+}
+
+func (t *realPingTicker) C() <-chan time.Time {
+	return t.Ticker.C
+}
+
+var pingTickerFactory = func() pingTicker {
+	return &realPingTicker{time.NewTicker(30 * time.Second)}
 }
 
 func NewHub() *Hub {
@@ -94,7 +117,7 @@ func (c *Client) readPump() {
 }
 
 func (c *Client) writePump() {
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := pingTickerFactory()
 	defer func() {
 		ticker.Stop()
 		_ = c.conn.Close()
@@ -110,7 +133,7 @@ func (c *Client) writePump() {
 			if err := c.conn.WriteMessage(websocket.TextMessage, message); err != nil {
 				return
 			}
-		case <-ticker.C:
+		case <-ticker.C():
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
