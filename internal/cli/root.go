@@ -259,15 +259,11 @@ func serveAnalytics(
 
 	// Determine if we should use secure cookies (HTTPS required)
 	secureEnabled := secureCookiesEnabled(cfg)
-	sameSiteMode := "Lax"
-	if secureEnabled {
-		sameSiteMode = "None" // SameSite=None requires Secure flag
-	}
 
 	app.Use(csrf.New(csrf.Config{
 		Extractor:      extractors.FromHeader("X-CSRF-Token"),
 		CookieName:     "kaunta_csrf",
-		CookieSameSite: sameSiteMode,
+		CookieSameSite: "Lax",         // Lax works for same-site requests
 		CookieHTTPOnly: false,         // Must be false to allow JavaScript to read token
 		CookieSecure:   secureEnabled, // Only enable for HTTPS deployments
 		IdleTimeout:    7 * 24 * time.Hour,
