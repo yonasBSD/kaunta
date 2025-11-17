@@ -55,3 +55,4 @@ playwright-report/
 playwright/.cache/
 log/
 /.local/
+.playwright-mcp/

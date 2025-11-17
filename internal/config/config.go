@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/spf13/viper"
-	"github.com/adrg/xdg"
 )
 
 // Config holds application configuration
@@ -40,7 +39,19 @@ func newBaseViper() *viper.Viper {
 	v.SetConfigName("kaunta")
 	v.SetConfigType("toml")
 	v.AddConfigPath(".")
-	v.AddConfigPath(filepath.Join(xdg.ConfigHome, "kaunta"))
+
+	// Use XDG Base Directory specification
+	// Manual implementation to support testing (xdg library caches at init)
+	configHome := os.Getenv("XDG_CONFIG_HOME")
+	if configHome == "" {
+		if home, err := os.UserHomeDir(); err == nil {
+			configHome = filepath.Join(home, ".config")
+		}
+	}
+	if configHome != "" {
+		v.AddConfigPath(filepath.Join(configHome, "kaunta"))
+	}
+
 	return v
 }
 

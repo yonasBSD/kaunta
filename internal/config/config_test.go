@@ -26,13 +26,16 @@ func unsetEnv(t *testing.T, key string) {
 
 func writeTestConfig(t *testing.T, home string, contents string) {
 	t.Helper()
-	configDir := filepath.Join(home, ".kaunta")
+	// Use XDG config path
+	configDir := filepath.Join(home, ".config", "kaunta")
 	require.NoError(t, os.MkdirAll(configDir, 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "kaunta.toml"), []byte(contents), 0o644))
 }
 
 func TestLoadDefaultsWhenNoConfigSources(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpHome, ".config"))
 	unsetEnv(t, "DATABASE_URL")
 	unsetEnv(t, "PORT")
 	unsetEnv(t, "DATA_DIR")
@@ -49,7 +52,9 @@ func TestLoadDefaultsWhenNoConfigSources(t *testing.T) {
 }
 
 func TestLoadUsesEnvironmentVariables(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpHome, ".config"))
 	t.Setenv("DATABASE_URL", "postgres://env-user:env-pass@localhost:5432/envdb")
 	t.Setenv("PORT", "4321")
 	t.Setenv("DATA_DIR", "/tmp/env-data")
@@ -68,6 +73,7 @@ func TestLoadUsesEnvironmentVariables(t *testing.T) {
 func TestLoadWithOverridesPriority(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	writeTestConfig(t, home, `
 database_url = "postgres://config"
 port = "4000"
@@ -100,6 +106,7 @@ secure_cookies = true
 func TestLoadFallsBackToEnvWhenConfigMissing(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	writeTestConfig(t, home, `
 data_dir = "./config-data"
 `)
