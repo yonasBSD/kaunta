@@ -1050,7 +1050,7 @@
               <tbody>
                 <template
                   x-for="(item, index) in breakdownData"
-                  :key="item.name || item.id || index"
+                  :key="index"
                 >
                   <tr>
                     <td x-text="item.name"></td>
