@@ -30,8 +30,8 @@ var countriesGeoJSON []byte
 //go:embed dashboard.html
 var dashboardTemplate []byte
 
-//go:embed index.html
-var indexTemplate []byte
+//go:embed views
+var viewsFS embed.FS
 
 var executeCLI = cli.Execute
 
@@ -45,7 +45,7 @@ func run() error {
 		vendorCSS,
 		countriesGeoJSON,
 		dashboardTemplate,
-		indexTemplate,
+		viewsFS,
 	)
 }
 

@@ -1,0 +1,163 @@
+<style>
+  .hero {
+    margin-bottom: 48px;
+  }
+
+  .hero h1 {
+    font-size: 48px;
+    font-weight: 500;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 16px;
+  }
+
+  .hero .subtitle {
+    font-size: 20px;
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+
+  .cta-section {
+    margin-top: 48px;
+  }
+
+  .cta-buttons {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    padding: 12px 24px;
+    border-radius: 12px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-primary {
+    background: var(--accent-color);
+    color: white;
+    border: 1px solid var(--accent-color);
+  }
+
+  .btn-primary:hover {
+    background: var(--accent-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+  }
+
+  .btn-secondary {
+    background: var(--bg-glass);
+    backdrop-filter: blur(10px);
+    color: var(--accent-color);
+    border: 1px solid var(--border-color);
+  }
+
+  .btn-secondary:hover {
+    background: rgba(230, 240, 255, 0.85);
+    border-color: var(--accent-color);
+  }
+
+  .home-footer {
+    margin-top: 48px;
+    padding: 24px;
+    background: var(--bg-glass);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 800px;
+  }
+
+  .home-footer p {
+    color: var(--text-tertiary);
+    font-size: 14px;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+
+  .home-footer .company-name {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 600;
+  }
+
+  .home-footer .repo-link {
+    color: var(--accent-color);
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .home-footer .repo-link:hover {
+    color: var(--accent-dark);
+    text-decoration: underline;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .hero h1 {
+      font-size: 36px;
+    }
+
+    .hero .subtitle {
+      font-size: 18px;
+    }
+
+    .cta-buttons {
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .btn {
+      width: 100%;
+      max-width: 300px;
+      justify-content: center;
+    }
+  }
+</style>
+
+<div class="hero">
+  <div style="display: flex; justify-content: center; margin-bottom: 24px;">
+    <img src="/assets/kaunta.svg" alt="Kaunta Analytics" style="height: 88px; width: auto;" />
+  </div>
+  <h1 style="text-align: center; margin: 0 auto 16px auto;">Welcome to Kaunta</h1>
+  <p class="subtitle">Analytics without bloat</p>
+</div>
+
+<div class="cta-section">
+  <div class="cta-buttons">
+    <a href="/dashboard" class="btn btn-primary">
+      <span>📈</span>
+      View Dashboard
+    </a>
+    <a
+      href="https://github.com/seuros/kaunta"
+      class="btn btn-secondary"
+    >
+      <span>📖</span>
+      View on GitHub
+    </a>
+  </div>
+</div>
+
+<div class="home-footer">
+  <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;">
+    <img src="/assets/kaunta.svg" alt="Kaunta" style="height: 32px; width: auto;" />
+    <span class="company-name">Kaunta Analytics</span>
+  </div>
+  <p>
+    Built with Go, Fiber, Alpine.js, PostgreSQL, and Leaflet
+  </p>
+  <p>
+    <a href="https://github.com/seuros/kaunta" class="repo-link">View on GitHub</a>
+  </p>
+</div>

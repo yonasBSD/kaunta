@@ -27,7 +27,7 @@ Example:
 			VendorCSS,
 			CountriesGeoJSON,
 			DashboardTemplate,
-			IndexTemplate,
+			ViewsFS,
 		)
 	},
 }

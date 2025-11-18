@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/fs"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -22,6 +23,7 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/limiter"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/gofiber/fiber/v3/middleware/static"
+	"github.com/gofiber/template/html/v2"
 	"github.com/spf13/cobra"
 
 	"github.com/seuros/kaunta/internal/config"
@@ -80,7 +82,7 @@ It provides real-time analytics and a clean dashboard interface.`,
 				VendorCSS,
 				CountriesGeoJSON,
 				DashboardTemplate,
-				IndexTemplate,
+				ViewsFS,
 			)
 		}
 		return cmd.Help()
@@ -95,8 +97,8 @@ func Execute(
 	vendorJS,
 	vendorCSS,
 	countriesGeoJSON,
-	dashboardTemplate,
-	indexTemplate []byte,
+	dashboardTemplate []byte,
+	viewsFS interface{},
 ) error {
 	Version = version
 	AssetsFS = assetsFS
@@ -105,7 +107,7 @@ func Execute(
 	VendorCSS = vendorCSS
 	CountriesGeoJSON = countriesGeoJSON
 	DashboardTemplate = dashboardTemplate
-	IndexTemplate = indexTemplate
+	ViewsFS = viewsFS
 
 	RootCmd.Version = version
 
@@ -123,13 +125,14 @@ var (
 	VendorCSS         []byte
 	CountriesGeoJSON  []byte
 	DashboardTemplate []byte
-	IndexTemplate     []byte
+	ViewsFS           interface{} // embed.FS for template views
 )
 
 // serveAnalytics runs the Kaunta server
 func serveAnalytics(
 	assetsFS interface{},
-	trackerScript, vendorJS, vendorCSS, countriesGeoJSON, dashboardTemplate, indexTemplate []byte,
+	trackerScript, vendorJS, vendorCSS, countriesGeoJSON, dashboardTemplate []byte,
+	viewsFS interface{},
 ) error {
 	// Ensure logger is flushed on exit
 	defer func() {
@@ -199,12 +202,21 @@ func serveAnalytics(
 		}
 	}()
 
+	// Initialize HTML template engine
+	viewsEmbedFS, ok := viewsFS.(embed.FS)
+	if !ok {
+		logging.Fatal("viewsFS is not embed.FS")
+	}
+	// Convert embed.FS to http.FileSystem using http.FS
+	httpFS := http.FS(viewsEmbedFS)
+	engine := html.NewFileSystem(httpFS, ".html")
+
 	// Create Fiber app
 	appName := "Kaunta - Analytics without bloat"
 	if Version != "" {
 		appName = fmt.Sprintf("Kaunta v%s - Analytics without bloat", Version)
 	}
-	app := fiber.New(createFiberConfig(appName))
+	app := fiber.New(createFiberConfig(appName, engine))
 
 	// Middleware
 	app.Use(recover.New())
@@ -330,7 +342,11 @@ func serveAnalytics(
 	})
 
 	// Routes
-	app.Get("/", handleIndex(indexTemplate))
+	app.Get("/", func(c fiber.Ctx) error {
+		return c.Render("views/index", fiber.Map{
+			"Title": "Kaunta - Analytics without bloat",
+		}, "views/layouts/base")
+	})
 	app.Get("/health", handleHealth)
 	app.Get("/up", healthcheck.New(healthcheck.Config{
 		Probe: func(c fiber.Ctx) bool {
@@ -394,17 +410,17 @@ func serveAnalytics(
 
 	// Login page (public)
 	app.Get("/login", func(c fiber.Ctx) error {
-		c.Set("Content-Type", "text/html; charset=utf-8")
-		return c.SendString(loginPageHTML())
+		return c.Render("views/login", fiber.Map{
+			"Title": "Login - Kaunta",
+		}, "views/layouts/base")
 	})
 
 	// Dashboard UI (protected)
 	app.Get("/dashboard", middleware.AuthWithRedirect, func(c fiber.Ctx) error {
-		c.Set("Content-Type", "text/html; charset=utf-8")
-		// Replace Go template variables in embedded HTML
-		html := strings.ReplaceAll(string(dashboardTemplate), "{{.Title}}", "Kaunta Dashboard")
-		html = strings.ReplaceAll(html, "{{.Version}}", Version)
-		return c.SendString(html)
+		return c.Render("views/dashboard/home", fiber.Map{
+			"Title":   "Dashboard",
+			"Version": Version,
+		}, "views/layouts/dashboard")
 	})
 
 	// Protected API endpoints
@@ -435,13 +451,6 @@ func serveAnalytics(
 }
 
 // Handler functions
-
-func handleIndex(indexTemplate []byte) fiber.Handler {
-	return func(c fiber.Ctx) error {
-		c.Set("Content-Type", "text/html; charset=utf-8")
-		return c.Send(indexTemplate)
-	}
-}
 
 func handleHealth(c fiber.Ctx) error {
 	return c.JSON(fiber.Map{

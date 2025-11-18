@@ -8,7 +8,7 @@ import (
 
 func TestCreateFiberConfig(t *testing.T) {
 	appName := "Test App"
-	config := createFiberConfig(appName)
+	config := createFiberConfig(appName, nil)
 
 	// AppName should always be set correctly
 	assert.Equal(t, appName, config.AppName, "AppName should match input")
@@ -39,7 +39,7 @@ func TestCreateFiberConfigAppNameFormat(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config := createFiberConfig(tt.appName)
+			config := createFiberConfig(tt.appName, nil)
 			assert.Equal(t, tt.expected, config.AppName)
 		})
 	}

@@ -33,17 +33,6 @@ func performRequest(t *testing.T, app *fiber.App, target string) *http.Response 
 	return resp
 }
 
-func TestHandleIndexReturnsHTML(t *testing.T) {
-	app := newFiberApp("/", handleIndex([]byte("<h1>Hello</h1>")))
-	resp := performRequest(t, app, "/")
-
-	body, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-
-	assert.Equal(t, "<h1>Hello</h1>", string(body))
-	assert.Equal(t, "text/html; charset=utf-8", resp.Header.Get("Content-Type"))
-}
-
 func TestHandleHealthPayload(t *testing.T) {
 	app := newFiberApp("/health", handleHealth)
 	resp := performRequest(t, app, "/health")
