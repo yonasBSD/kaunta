@@ -15,8 +15,8 @@ A simple, fast, privacy-focused web analytics engine. Drop-in replacement for Um
 ## Features
 
 - **Privacy-First** - No cookies, no tracking, privacy by design
-- **Fast Deployment** - Single binary, ready to run
-- **Lightweight** - Minimal memory footprint
+- **Fast Deployment** - Single binary (~17MB), ready to run
+- **Lightweight** - Docker image only 28MB, minimal memory footprint
 - **Umami Compatible** - Same API & database schema
 - **Full Analytics** - Visitors, pageviews, referrers, devices, locations, real-time stats
 - **Geolocation** - City/region level with automatic MaxMind GeoLite2 download
