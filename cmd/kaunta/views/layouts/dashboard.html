@@ -355,6 +355,7 @@
           sortColumn: "count",
           sortDirection: "desc",
           refreshInterval: null,
+          chartRefreshInterval: null,
           realtimeSocket: null,
           realtimeReconnectTimer: null,
           realtimeRefreshTimeout: null,
@@ -450,8 +451,18 @@
             }
           },
           async loadChartAndSetupIntervals() {
+            // Clear existing interval to prevent duplicates
+            if (this.chartRefreshInterval) {
+              clearInterval(this.chartRefreshInterval);
+            }
             await this.loadChart();
-            setInterval(() => this.loadChart(), 60000);
+            this.chartRefreshInterval = setInterval(() => {
+              // Only refresh if canvas is visible (not hidden by x-show)
+              const canvas = document.getElementById("pageviewsChart");
+              if (canvas && canvas.offsetParent !== null) {
+                this.loadChart();
+              }
+            }, 60000);
           },
           async loadWebsites() {
             this.websitesLoading = true;
@@ -492,6 +503,9 @@
               // Clear existing intervals
               if (this.refreshInterval) {
                 clearInterval(this.refreshInterval);
+              }
+              if (this.chartRefreshInterval) {
+                clearInterval(this.chartRefreshInterval);
               }
 
               // Sequential loading to prevent race conditions
@@ -648,17 +662,30 @@
                       })
                     : [];
                 const values = data && data.length > 0 ? data.map((point) => point.value) : [];
-                if (this.chart) {
-                  this.chart.destroy();
-                }
                 const ctx = document.getElementById("pageviewsChart");
                 if (!ctx) {
                   console.error("Canvas element pageviewsChart not found");
                   return;
                 }
+                // Check if canvas is visible (not hidden by x-show)
+                if (ctx.offsetParent === null) {
+                  return;
+                }
 
                 // Skip chart creation if no data to prevent Chart.js fill errors
                 if (labels.length === 0) {
+                  if (this.chart) {
+                    this.chart.destroy();
+                    this.chart = null;
+                  }
+                  return;
+                }
+
+                // Update existing chart data instead of recreating (more performant)
+                if (this.chart) {
+                  this.chart.data.labels = labels;
+                  this.chart.data.datasets[0].data = values;
+                  this.chart.update('none'); // 'none' skips animations for faster updates
                   return;
                 }
 
@@ -730,7 +757,7 @@
               // Try to initialize chart again after a short delay
               setTimeout(() => {
                 const ctx = document.getElementById("pageviewsChart");
-                if (ctx && !this.chart) {
+                if (ctx && ctx.offsetParent !== null && !this.chart) {
                   console.log("Retrying chart initialization...");
                   this.loadChart();
                 }
