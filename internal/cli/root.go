@@ -1016,7 +1016,12 @@ func normalizeOriginForCSRF(domain string) (string, bool) {
 
 	origin := trimmed
 	if !strings.HasPrefix(origin, "http://") && !strings.HasPrefix(origin, "https://") {
-		origin = "http://" + origin
+		// Use https:// for non-localhost domains (safer default for production)
+		if strings.HasPrefix(origin, "localhost") || strings.HasPrefix(origin, "127.0.0.1") {
+			origin = "http://" + origin
+		} else {
+			origin = "https://" + origin
+		}
 	}
 
 	origin = strings.TrimSuffix(origin, "/")
