@@ -158,8 +158,28 @@ func serveAnalytics(
 			if err := runSetupServer(); err != nil && err != ErrSetupComplete {
 				return err
 			}
-			// Setup completed, reload config and restart
-			logging.L().Info("setup completed, restarting server")
+
+			// Reload configuration from saved file and update environment
+			logging.L().Info("setup completed, reloading configuration")
+			cfg, err := config.Load()
+			if err != nil {
+				logging.L().Error("failed to reload config after setup", zap.Error(err))
+				return fmt.Errorf("failed to reload config after setup: %w", err)
+			}
+
+			// Update environment variables from newly saved config
+			if cfg.DatabaseURL != "" {
+				_ = os.Setenv("DATABASE_URL", cfg.DatabaseURL)
+			}
+			if cfg.Port != "" {
+				_ = os.Setenv("PORT", cfg.Port)
+			}
+			if cfg.DataDir != "" {
+				_ = os.Setenv("DATA_DIR", cfg.DataDir)
+			}
+			_ = os.Setenv("SECURE_COOKIES", strconv.FormatBool(cfg.SecureCookies))
+
+			logging.L().Info("configuration reloaded, restarting server")
 			continue
 		}
 		break
