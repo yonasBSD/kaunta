@@ -37,6 +37,7 @@ Download the latest release from [GitHub Releases](https://github.com/seuros/kau
 
 Kaunta runs on NAS devices via Docker:
 - **Synology** - [Installation Guide](https://mariushosting.com/how-to-install-kaunta-on-your-synology-nas/)
+- **Ugreen** - [Installation Guide](https://dockerplaybooks.dpdns.org/kauntaonugreen/kaunta.html)
 - **QNAP**, **TrueNAS**, **Unraid** - Use the standard Docker image
 
 ## Installation
