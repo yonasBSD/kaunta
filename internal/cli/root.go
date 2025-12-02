@@ -208,21 +208,7 @@ func serveAnalytics(
 	if err != nil {
 		logging.L().Warn("failed to load config for trusted origins", zap.Error(err))
 	} else if len(cfg.TrustedOrigins) > 0 {
-		validOrigins := make([]string, 0, len(cfg.TrustedOrigins))
-		for _, origin := range cfg.TrustedOrigins {
-			clean, err := config.SanitizeTrustedDomain(origin)
-			if err != nil {
-				logging.L().Warn("skipping invalid trusted origin from config", zap.String("origin", origin), zap.Error(err))
-				continue
-			}
-			validOrigins = append(validOrigins, clean)
-		}
-
-		if len(validOrigins) > 0 {
-			syncTrustedOrigins(validOrigins)
-		} else {
-			logging.L().Warn("no valid trusted origins to sync from config/env")
-		}
+		syncTrustedOrigins(cfg.TrustedOrigins)
 	}
 
 	// Ensure self website exists for dogfooding (creates if missing for existing installations)
@@ -532,6 +518,15 @@ func serveAnalytics(
 	app.Get("/dashboard/websites", middleware.AuthWithRedirect, func(c fiber.Ctx) error {
 		return c.Render("views/dashboard/websites", fiber.Map{
 			"Title":         "Websites",
+			"Version":       Version,
+			"SelfWebsiteID": config.SelfWebsiteID,
+		})
+	})
+
+	// Goals Management Dashboard page (proctected)
+	app.Get("/dashboard/goals", middleware.AuthWithRedirect, func(c fiber.Ctx) error {
+		return c.Render("views/dashboard/goals", fiber.Map{
+			"Title":         "Goals",
 			"Version":       Version,
 			"SelfWebsiteID": config.SelfWebsiteID,
 		})
