@@ -1000,7 +1000,15 @@ footer .repo-link:hover {
   margin-bottom: var(--space-xl);
 }
 
+.stat-card {
+  position: relative;
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
 
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-xl);
+}
 
 .stat-header {
   display: flex;
