@@ -1181,6 +1181,11 @@ func runSetupServer() error {
 		return c.Redirect().To("/setup")
 	})
 
+	// Health check endpoint (for Docker healthcheck during setup)
+	app.Get("/up", func(c fiber.Ctx) error {
+		return c.SendString("OK")
+	})
+
 	// Static assets (for favicon)
 	app.Get("/assets/favicon.ico", func(c fiber.Ctx) error {
 		data, err := fs.ReadFile(AssetsFS.(embed.FS), "assets/favicon.ico")
