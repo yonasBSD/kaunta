@@ -31,6 +31,9 @@ Pre-built binaries are available for:
 - **Windows** (amd64, arm64)
 - **FreeBSD** (amd64)
 
+Single-board computers:
+- **Raspberry Pi / Orange Pi (64-bit)** - use the published `linux/arm64` Docker image or build on-device with `docker buildx build --platform linux/arm64 .`; see the step-by-step guide at https://dockerplaybooks.dpdns.org/kauntaonpi/kaunta.html
+
 Download the latest release from [GitHub Releases](https://github.com/seuros/kaunta/releases). The `--self-upgrade` command works on all platforms to update to the latest version.
 
 ### NAS Devices

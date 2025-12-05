@@ -12,6 +12,9 @@ FROM golang:1.25-alpine AS backend-builder
 WORKDIR /app
 
 ARG VERSION=dev
+ARG TARGETOS
+ARG TARGETARCH
+ARG TARGETVARIANT
 
 RUN apk add --no-cache git ca-certificates tzdata
 
@@ -21,8 +24,13 @@ RUN go mod download
 COPY . .
 COPY --from=frontend-builder /app/cmd/kaunta/assets ./cmd/kaunta/assets
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build \
+# Respect the target platform passed by buildx so the binary matches the image architecture.
+ENV GOOS=${TARGETOS} GOARCH=${TARGETARCH}
+
+RUN \
+  if [ "${TARGETARCH}" = "arm" ] && [ -n "${TARGETVARIANT}" ]; then export GOARM=${TARGETVARIANT#v}; fi; \
+  CGO_ENABLED=0 GOOS=${GOOS:-linux} GOARCH=${GOARCH:-amd64} \
+  go build \
     -tags=docker \
     -ldflags="-w -s -X github.com/seuros/kaunta/internal/cli.Version=${VERSION}" \
     -o kaunta \
