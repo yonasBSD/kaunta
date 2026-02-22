@@ -502,6 +502,19 @@
     "
   ></div>
 
+  <div
+    aria-hidden="true"
+    style="display: none"
+    data-effect="
+      if ($toast && $toast.show) {
+        clearTimeout(window.__kauntaToastTimer || 0);
+        window.__kauntaToastTimer = setTimeout(() => {
+          $toast = { show: false, message: '', type: '' };
+        }, 3000);
+      }
+    "
+  ></div>
+
   <!-- Toast Notification -->
   <div
     data-show="$toast.show"

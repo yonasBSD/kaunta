@@ -1,10 +1,12 @@
 package realtime
 
 import (
+	"net/http"
+	"strings"
+	"sync"
 	"time"
 
-	"github.com/gofiber/contrib/v3/websocket"
-	"github.com/gofiber/fiber/v3"
+	"github.com/gorilla/websocket"
 
 	"github.com/seuros/kaunta/internal/logging"
 	"go.uber.org/zap"
@@ -16,6 +18,8 @@ type Hub struct {
 	broadcast   chan []byte
 	clientCount chan chan int // For thread-safe client count queries
 	clients     map[*Client]struct{}
+	originMu    sync.RWMutex
+	origins     map[string]struct{}
 }
 
 type wsConn interface {
@@ -101,8 +105,19 @@ func (h *Hub) GetClientCount() int {
 	return <-response
 }
 
-func (h *Hub) Handler() fiber.Handler {
-	return websocket.New(func(conn *websocket.Conn) {
+func (h *Hub) Handler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		upgrader := websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool {
+				return h.isOriginAllowed(r.Header.Get("Origin"))
+			},
+		}
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			logging.L().Warn("websocket upgrade failed", zap.Error(err))
+			return
+		}
+
 		client := &Client{
 			hub:  h,
 			conn: conn,
@@ -113,7 +128,44 @@ func (h *Hub) Handler() fiber.Handler {
 
 		go client.writePump()
 		client.readPump()
-	})
+	}
+}
+
+// SetAllowedOrigins configures the list of origins that may establish WebSocket connections.
+func (h *Hub) SetAllowedOrigins(origins []string) {
+	h.originMu.Lock()
+	defer h.originMu.Unlock()
+
+	if len(origins) == 0 {
+		h.origins = nil
+		return
+	}
+
+	allowed := make(map[string]struct{}, len(origins))
+	for _, origin := range origins {
+		origin = strings.ToLower(strings.TrimSpace(origin))
+		if origin == "" {
+			continue
+		}
+		allowed[origin] = struct{}{}
+	}
+	h.origins = allowed
+}
+
+func (h *Hub) isOriginAllowed(origin string) bool {
+	if origin == "" {
+		return true
+	}
+
+	h.originMu.RLock()
+	defer h.originMu.RUnlock()
+
+	if len(h.origins) == 0 {
+		return true
+	}
+
+	_, ok := h.origins[strings.ToLower(origin)]
+	return ok
 }
 
 func (c *Client) readPump() {
